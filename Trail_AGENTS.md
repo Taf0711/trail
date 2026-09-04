@@ -2,7 +2,7 @@
 
 > **Working thesis:** Trail is a hardware-specialized LLM inference runtime/compiler.  
 > **Initial target:** NVIDIA GeForce RTX 5090 / Blackwell SM120.  
-> **Current development environment:** Windows host + WSL2 Linux.  
+> **Current development environment:** Native Windows (WSL2 lab retired; not in use).  
 > **Primary objective:** Learn the inference stack deeply by building a legitimate system that progressively approaches the hardware and extracts measurable performance from one concrete machine.
 
 ---
