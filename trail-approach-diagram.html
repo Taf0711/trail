@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trail — Roadmap: Vector-Add → Inference Kernels</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #020617;
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    padding: 40px 24px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1400px; margin: 0 auto; }
+  header { margin-bottom: 28px; }
+  .title { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; box-shadow: 0 0 8px #34d399; } 50% { opacity: 0.4; box-shadow: none; } }
+  .subtitle { color: #64748b; font-size: 12px; margin-top: 8px; }
+  .card {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  svg { width: 100%; height: auto; display: block; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+  .cards .card { padding: 16px; }
+  .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .card-header h3 { font-size: 12px; letter-spacing: 1px; color: #cbd5e1; text-transform: uppercase; }
+  .cdot { width: 8px; height: 8px; border-radius: 50%; }
+  .cdot.cyan { background: #22d3ee; } .cdot.green { background: #34d399; } .cdot.violet { background: #a78bfa; }
+  ul { list-style: none; font-size: 11px; line-height: 1.8; color: #94a3b8; }
+  ul b { color: #e2e8f0; font-weight: 600; }
+  footer { margin-top: 24px; text-align: center; color: #475569; font-size: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="title"><span class="dot"></span>Trail — Approach: M1 vector-add → sm_120 inference kernels</div>
+  <div class="subtitle">Human-first kernel design · correctness gate → roofline → iterate · informed by the engine landscape (vLLM / SGLang / llama.cpp / FlashInfer) and Qwen3.8-27B sm_120 case study</div>
+</header>
+
+<div class="card">
+<svg viewBox="0 0 1360 860" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+  </pattern>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+  </marker>
+  <marker id="arrowCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee"/>
+  </marker>
+  <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#34d399"/>
+  </marker>
+  <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24"/>
+  </marker>
+  <marker id="arrowViolet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#a78bfa"/>
+  </marker>
+</defs>
+
+<rect width="1360" height="860" fill="#020617"/>
+<rect width="1360" height="860" fill="url(#grid)"/>
+
+<!-- ============ ARROWS (behind boxes) ============ -->
+<!-- phase ladder arrows -->
+<path d="M 250 218 L 250 258" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+<path d="M 250 328 L 250 368" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+<path d="M 250 438 L 250 478" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+<!-- experiment ladder -->
+<path d="M 250 548 L 250 588" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowGreen)"/>
+<path d="M 250 638 L 250 678" stroke="#34d399" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowGreen)"/>
+<!-- human loop -->
+<path d="M 620 108 C 700 108 700 178 632 178" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowAmber)"/>
+<!-- reference -> tests -->
+<path d="M 655 233 L 830 233" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+<!-- verify chain -->
+<path d="M 900 293 L 900 323" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M 900 383 L 900 413" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+<!-- roofline gate -> keep/iterate -->
+<path d="M 980 478 L 980 508" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+<!-- E0001 -> graphs exp -->
+<path d="M 640 663 L 830 663" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrowViolet)"/>
+<!-- GDN target arrow from ladder -->
+<path d="M 250 728 L 250 758" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrowViolet)"/>
+
+<!-- ============ BOUNDARY: iteration loop ============ -->
+<rect x="560" y="40" width="770" height="520" rx="12" fill="none" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="8,4" opacity="0.55"/>
+<text x="580" y="64" font-size="10" fill="#fbbf24" opacity="0.8">EVERY KERNEL: HUMAN-FIRST LOOP (Trail_AGENTS.md §8)</text>
+
+<!-- ============ PHASE LADDER (left column) ============ -->
+<!-- M1 core -->
+<rect x="70" y="90" width="360" height="128" rx="6" fill="#0f172a"/>
+<rect x="70" y="90" width="360" height="128" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="90" y="118" font-size="12" fill="#e2e8f0" font-weight="bold">M1 · CUDA vector-add kernel (NOW)</text>
+<text x="90" y="140" font-size="9" fill="#94a3b8">human attempt first · scalar grid-stride</text>
+<text x="90" y="156" font-size="9" fill="#94a3b8">256 thr/block · grid = ceil(n/256)</text>
+<text x="90" y="178" font-size="8" fill="#64748b">roofline: 12 B/elt ÷ 1.79 TB/s = the speed of light</text>
+<text x="90" y="198" font-size="8" fill="#fbbf24">docs/research-vector-add-sm120.md §5</text>
+
+<rect x="70" y="228" width="360" height="100" rx="6" fill="#0f172a"/>
+<rect x="70" y="228" width="360" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="90" y="256" font-size="12" fill="#e2e8f0" font-weight="bold">M1 · Differential test vs CPU ref</text>
+<text x="90" y="278" font-size="9" fill="#94a3b8">random + edge cases already in Catch2 suite</text>
+<text x="90" y="294" font-size="9" fill="#94a3b8">(empty · zeros · negatives · non-pow2 · large mag)</text>
+<text x="90" y="314" font-size="8" fill="#64748b">trail::reference::vector_add</text>
+
+<rect x="70" y="338" width="360" height="100" rx="6" fill="#0f172a"/>
+<rect x="70" y="338" width="360" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="90" y="366" font-size="12" fill="#e2e8f0" font-weight="bold">M1 · Sanitize + benchmark idle GPU</text>
+<text x="90" y="388" font-size="9" fill="#94a3b8">compute-sanitizer memcheck → 0 errors</text>
+<text x="90" y="404" font-size="9" fill="#94a3b8">N ≥ 2^24 · kernel-only CUDA-event timing</text>
+<text x="90" y="420" font-size="8" fill="#64748b">report achieved GB/s vs 1.79 TB/s peak</text>
+
+<rect x="70" y="448" width="360" height="100" rx="6" fill="#0f172a"/>
+<rect x="70" y="448" width="360" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+<text x="90" y="476" font-size="12" fill="#e2e8f0" font-weight="bold">Gate: correctness + roofline</text>
+<text x="90" y="498" font-size="9" fill="#94a3b8">&gt;100% of peak = measurement bug, not a win</text>
+<text x="90" y="514" font-size="9" fill="#94a3b8">engines live at 64–90% of peak — same target</text>
+<text x="90" y="530" font-size="8" fill="#64748b">KernelBench / FlashInfer-Bench protocol</text>
+
+<!-- experiments -->
+<rect x="70" y="558" width="360" height="80" rx="6" fill="#0f172a"/>
+<rect x="70" y="558" width="360" height="80" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+<text x="90" y="586" font-size="12" fill="#e2e8f0" font-weight="bold">EXP 1 · float4 vectorized loads</text>
+<text x="90" y="606" font-size="9" fill="#94a3b8">LDG.E.128 + scalar tail · check SASS (cuobjdump)</text>
+<text x="90" y="622" font-size="8" fill="#64748b">the q4_0-KV lesson: fewer bytes moved = the win</text>
+
+<rect x="70" y="648" width="360" height="80" rx="6" fill="#0f172a"/>
+<rect x="70" y="648" width="360" height="80" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+<text x="90" y="676" font-size="12" fill="#e2e8f0" font-weight="bold">EXP 2 · Fused chain (fusion pays at hi-BW)</text>
+<text x="90" y="696" font-size="9" fill="#94a3b8">d = (a+b)*k one kernel vs two · 3-pass → 1-pass</text>
+<text x="90" y="712" font-size="8" fill="#64748b">llama.cpp: fusion → 80% of 5090 speed-of-light</text>
+
+<rect x="70" y="738" width="360" height="90" rx="6" fill="#0f172a"/>
+<rect x="70" y="738" width="360" height="90" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="90" y="766" font-size="12" fill="#e2e8f0" font-weight="bold">M2+ target · Gated DeltaNet state kernel</text>
+<text x="90" y="788" font-size="9" fill="#94a3b8">chunked delta-rule scan · Qwen3.8-27B's core op</text>
+<text x="90" y="804" font-size="9" fill="#94a3b8">O(n) linear attention · fixed recurrent state</text>
+<text x="90" y="820" font-size="8" fill="#64748b">stretch goal — after the elementwise ladder</text>
+
+<!-- ============ LOOP (right column, inside boundary) ============ -->
+<!-- human -->
+<rect x="590" y="85" width="300" height="93" rx="6" fill="#0f172a"/>
+<rect x="590" y="85" width="300" height="93" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="610" y="113" font-size="12" fill="#e2e8f0" font-weight="bold">1 · HUMAN designs kernel</text>
+<text x="610" y="135" font-size="9" fill="#94a3b8">AI provides research notes, not the code</text>
+<text x="610" y="151" font-size="9" fill="#94a3b8">then AI reviews the attempt</text>
+<text x="610" y="167" font-size="8" fill="#64748b">reason from roofline facts, not copy-paste</text>
+
+<!-- reference -->
+<rect x="920" y="190" width="240" height="86" rx="6" fill="#0f172a"/>
+<rect x="920" y="190" width="240" height="86" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+<text x="940" y="218" font-size="12" fill="#e2e8f0" font-weight="bold">2 · CPU reference (done)</text>
+<text x="940" y="240" font-size="9" fill="#94a3b8">references/cpp/vector_add.hpp</text>
+<text x="940" y="256" font-size="9" fill="#94a3b8">6 edge-case tests already green</text>
+
+<!-- diff test -->
+<rect x="770" y="253" width="260" height="80" rx="6" fill="#0f172a"/>
+<rect x="770" y="253" width="260" height="80" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="790" y="281" font-size="12" fill="#e2e8f0" font-weight="bold">3 · Differential test</text>
+<text x="790" y="303" font-size="9" fill="#94a3b8">GPU kernel vs trail::reference</text>
+<text x="790" y="319" font-size="8" fill="#64748b">+ ΔNLL-style divergence metric (Qwen case)</text>
+
+<!-- sanitize -->
+<rect x="770" y="333" width="260" height="80" rx="6" fill="#0f172a"/>
+<rect x="770" y="333" width="260" height="80" rx="6" fill="rgba(136,19,55,0.4)" stroke="#fb7185" stroke-width="1.5"/>
+<text x="790" y="361" font-size="12" fill="#e2e8f0" font-weight="bold">4 · compute-sanitizer</text>
+<text x="790" y="383" font-size="9" fill="#94a3b8">memcheck → 0 errors required</text>
+<text x="790" y="399" font-size="8" fill="#64748b">sm_120 bugs hide from smoke tests alone</text>
+
+<!-- benchmark -->
+<rect x="770" y="423" width="260" height="90" rx="6" fill="#0f172a"/>
+<rect x="770" y="423" width="260" height="90" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+<text x="790" y="451" font-size="12" fill="#e2e8f0" font-weight="bold">5 · Roofline benchmark</text>
+<text x="790" y="473" font-size="9" fill="#94a3b8">µs/kernel + achieved GB/s</text>
+<text x="790" y="489" font-size="9" fill="#94a3b8">GPU idle · N ≥ 2^24 · launch overhead = noise</text>
+<text x="790" y="505" font-size="8" fill="#64748b">compare: E0001 baseline 4.5 µs / graph 0.79 µs</text>
+
+<!-- E0001 -->
+<rect x="460" y="620" width="180" height="86" rx="6" fill="#0f172a"/>
+<rect x="460" y="620" width="180" height="86" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="476" y="648" font-size="11" fill="#e2e8f0" font-weight="bold">E0001 (done)</text>
+<text x="476" y="668" font-size="8" fill="#94a3b8">CUDA graphs 5x</text>
+<text x="476" y="682" font-size="8" fill="#94a3b8">4.5 → 0.79 µs/kernel</text>
+<text x="476" y="696" font-size="8" fill="#64748b">nsys-confirmed mechanism</text>
+
+<!-- graphs exp -->
+<rect x="850" y="620" width="300" height="86" rx="6" fill="#0f172a"/>
+<rect x="850" y="620" width="300" height="86" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="870" y="648" font-size="12" fill="#e2e8f0" font-weight="bold">EXP 3 · Graphs + dynamic shapes</text>
+<text x="870" y="670" font-size="9" fill="#94a3b8">FlashInfer's frontier: static launch, dynamic work</text>
+<text x="870" y="686" font-size="9" fill="#94a3b8">capture fused chain at small N (ties E0001)</text>
+<text x="870" y="700" font-size="8" fill="#64748b">every serious engine ships graphs by default</text>
+
+<!-- ecosystem strip -->
+<rect x="70" y="30" width="440" height="44" rx="6" fill="#0f172a"/>
+<rect x="70" y="30" width="440" height="44" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+<text x="90" y="48" font-size="9" fill="#94a3b8">INPUT · docs/research-inference-landscape.md</text>
+<text x="90" y="64" font-size="8" fill="#64748b">vLLM · SGLang · llama.cpp · TRT-LLM · FlashInfer · KernelBench · Qwen3.8-27B sm_120 numbers</text>
+
+<!-- ============ LEGEND ============ -->
+<rect x="1190" y="560" width="140" height="150" rx="6" fill="#0f172a" stroke="#1e293b"/>
+<text x="1204" y="580" font-size="9" fill="#94a3b8" font-weight="bold">LEGEND</text>
+<rect x="1204" y="590" width="14" height="10" fill="rgba(8,51,68,0.6)" stroke="#22d3ee" stroke-width="1"/>
+<text x="1224" y="599" font-size="8" fill="#64748b">M1 core path</text>
+<rect x="1204" y="606" width="14" height="10" fill="rgba(6,78,59,0.6)" stroke="#34d399" stroke-width="1"/>
+<text x="1224" y="615" font-size="9" fill="#64748b">experiments</text>
+<rect x="1204" y="622" width="14" height="10" fill="rgba(76,29,149,0.6)" stroke="#a78bfa" stroke-width="1"/>
+<text x="1224" y="631" font-size="9" fill="#64748b">validation / graphs</text>
+<rect x="1204" y="638" width="14" height="10" fill="rgba(136,19,55,0.6)" stroke="#fb7185" stroke-width="1"/>
+<text x="1224" y="641" font-size="9" fill="#64748b">sanitizer gate</text>
+<rect x="1204" y="638" width="14" height="10" fill="rgba(120,53,15,0.6)" stroke="#fbbf24" stroke-width="1"/>
+<text x="1224" y="657" font-size="9" fill="#64748b">human-first loop</text>
+<line x1="1204" y1="672" x2="1218" y2="672" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="1224" y="676" font-size="9" fill="#64748b">sequence</text>
+<line x1="1204" y1="690" x2="1218" y2="690" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4,3"/>
+<text x="1224" y="694" font-size="9" fill="#64748b">follow-up</text>
+</svg>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-header"><div class="cdot cyan"></div><h3>The method (every kernel)</h3></div>
+    <ul>
+      <li>• <b>Human designs first</b>, AI research/review second (§8 rule)</li>
+      <li>• Correctness gate: differential test + sanitizer</li>
+      <li>• Roofline gate: GB/s vs 1.79 TB/s peak — &gt;100% means the measurement is broken</li>
+      <li>• Same protocol KernelBench / FlashInfer-Bench use for AI-generated kernels</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="cdot green"></div><h3>Experiment ladder (post-M1)</h3></div>
+    <ul>
+      <li>• <b>float4 loads</b> — 4x fewer instructions, same principle as q4_0 KV cache being faster than f16 in the Qwen 5090 sweeps</li>
+      <li>• <b>Fused chain</b> — 3-pass → 1-pass memory traffic; fusion pays most at 1.79 TB/s</li>
+      <li>• <b>Grid-size sweep</b> — blocks = 1×..12× SM count (170 SMs)</li>
+      <li>• <b>Graphs + dynamic shapes</b> — extends E0001 toward FlashInfer's frontier</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="cdot green"></div><h3>Calibration targets (RTX 5090)</h3></div>
+    <ul>
+      <li>• Kernel launch: 4.5 µs plain / 0.79 µs graphed (E0001, ours)</li>
+      <li>• Vector-add roofline: ~1.79 TB/s → expect 64–90% of peak</li>
+      <li>• Qwen3.8-27B decode: 69 → 152 tok/s from stack choices alone</li>
+      <li>• llama.cpp speed-of-light rule: ~80% of theoretical is excellent</li>
+    </ul>
+  </div>
+</div>
+
+<footer>trail · docs/research-inference-landscape.md + docs/research-vector-add-sm120.md · generated 2026-09-03 · open this file in any browser</footer>
+</div>
+</body>
+</html>
