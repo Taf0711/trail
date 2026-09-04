@@ -1,0 +1,12 @@
+-- Configuring done (0.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: C:/Users/pre/Documents/Projects/trail/build
+[1/7] Generating CXX dyndep file CMakeFiles\trail_unit_tests.dir\CXX.dd
+[2/5] Building CUDA object CMakeFiles\trail_bench_vector_add_f4.dir\bench\vector_add_bench_float4.cu.obj
+vector_add_bench_float4.cu
+tmpxft_00000e60_00000000-7_vector_add_bench_float4.cudafe1.cpp
+[3/5] Linking CUDA executable trail_bench_vector_add_f4.exe
+[4/5] Building CUDA object CMakeFiles\trail_cuda_tests_f4.dir\tests\cuda\vector_add_float4_test.cu.obj
+vector_add_float4_test.cu
+tmpxft_00000bd4_00000000-7_vector_add_float4_test.cudafe1.cpp
+[5/5] Linking CXX executable trail_cuda_tests_f4.exe

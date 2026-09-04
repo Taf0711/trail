@@ -10,6 +10,7 @@ add_executable(trail_smoke src/smoke.cu)
 add_executable(trail_bench bench/smoke_bench.cu)
 add_executable(trail_bench_graph bench/smoke_bench_graph.cu)
 add_executable(trail_bench_vector_add bench/vector_add_bench.cu)
+add_executable(trail_bench_vector_add_f4 bench/vector_add_bench_float4.cu)
 
 if(MSVC)
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=/W4)
@@ -17,7 +18,7 @@ else()
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=-Wall,-Wextra)
 endif()
 
-foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add)
+foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add trail_bench_vector_add_f4)
     target_include_directories(${target} PRIVATE include src)
     set_target_properties(${target} PROPERTIES CUDA_ARCHITECTURES 120)
     target_compile_options(${target} PRIVATE
@@ -53,3 +54,13 @@ target_compile_options(trail_cuda_tests PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:${TRAIL_HOST_WARNING_FLAGS}>
 )
 catch_discover_tests(trail_cuda_tests)
+
+# EXP1 float4 candidate differential test.
+add_executable(trail_cuda_tests_f4 tests/cuda/vector_add_float4_test.cu)
+target_include_directories(trail_cuda_tests_f4 PRIVATE include src references/cpp tests/cuda)
+target_link_libraries(trail_cuda_tests_f4 PRIVATE Catch2::Catch2)
+set_target_properties(trail_cuda_tests_f4 PROPERTIES CUDA_ARCHITECTURES 120)
+target_compile_options(trail_cuda_tests_f4 PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:${TRAIL_HOST_WARNING_FLAGS}>
+)
+catch_discover_tests(trail_cuda_tests_f4)
