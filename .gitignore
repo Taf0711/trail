@@ -1,7 +1,9 @@
+build_log.txt
+build_trail.bat
+compile_test.bat
 /build/
 trail-approach-diagram.html
 docs/
 bench/RESULTS.md
 experiments/
 build_log.txt
-build_trail.bat
