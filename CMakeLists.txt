@@ -11,6 +11,7 @@ add_executable(trail_bench bench/smoke_bench.cu)
 add_executable(trail_bench_graph bench/smoke_bench_graph.cu)
 add_executable(trail_bench_vector_add bench/vector_add_bench.cu)
 add_executable(trail_bench_vector_add_f4 bench/vector_add_bench_float4.cu)
+add_executable(trail_l0_microbench bench/l0_microbench.cu)
 
 if(MSVC)
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=/W4)
@@ -18,7 +19,7 @@ else()
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=-Wall,-Wextra)
 endif()
 
-foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add trail_bench_vector_add_f4)
+foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add trail_bench_vector_add_f4 trail_l0_microbench)
     target_include_directories(${target} PRIVATE include src)
     set_target_properties(${target} PROPERTIES CUDA_ARCHITECTURES 120)
     target_compile_options(${target} PRIVATE
