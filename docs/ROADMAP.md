@@ -56,10 +56,18 @@ Secondary prediction confirmed: −15% at 2^26, −35% at 2^24 total.
 **KEEP size-scoped (≤ 2^26 total / pairs ≤ ~30 µs), REJECT at the E0005
 primary scale.** Full record: experiments/E0006_gemv_composed.md.
 
-## C2 — EXP7: dequant-cost kernel variant (NEXT — claim first)
+## C2 — EXP7: decode-residual attack (NEXT — claim first)
 
-**Goal**: attack E0005's residual ~18% gap (issue-side dequant cost).
-Two candidate mechanisms, decision by measurement:
+**Re-diagnosed 2026-09-14 (pre-coding, SASS-derived — see LEDGER EXP7):**
+the "issue-side dequant cost" framing is stale after E0005 — v2 loop body
+counted at 106 warp-inst/256 weights → 56% issue-utilized, FFMA 8.5%;
+LUT and W4A8/dp4a both attack a non-binding term and are REJECTED BY
+ANALYSIS (registered falsifiably: either winning >5% falsifies the SASS
+issue model and gets built immediately). The registered candidate is
+**v3: warp-contiguous block mapping** (DRAM burst/stream granularity).
+Original C2 text (superseded, kept for the record): attack E0005's
+residual ~18% gap via LUT (FLUTE/SqueezeLLM) vs W4A8 (QServe), decision
+by measurement.
 
 - **LUT dequant** (LUT-GEMM 2206.09557, FLUTE 2407.10960, SqueezeLLM
   2306.07629): table lookup replaces extract+scale+fma per weight; watch

@@ -366,6 +366,62 @@ deletion is not a win.
 Full record: `experiments/E0006_gemv_composed.md`. Checkpoint: C1 in
 docs/ROADMAP.md (closed). Next: C2/EXP7 dequant-cost claim.
 
+## EXP7 — decode-residual attack: SASS re-diagnosis, then warp-contiguity (v3)
+
+**Pre-coding re-diagnosis (SASAS-derived, 2026-09-14, from E0005_sass.txt):**
+the C2 framing ("attack the issue-side dequant cost") is E0004's diagnosis
+and is STALE after E0005's promotion. Counted from the emitted v2 loop body
+(0x310–0x9a0, back-edge `@!P1 BRA 0x310`): **106 warp-instructions per
+256-weight warp-iteration** — 16 FFMA + 4 FMUL (float compute 20), 25 LOP3
++ 13 SHF (extraction 38), 8 LDG.E.U8 (packed-scale bytes) + 2 LDG.E.128
+(x) + 1 LDG.E.32 (qs) + address/branch overhead.
+- Issue arithmetic: 0.414 warp-inst/weight × 2.68e8 = 1.11e8 warp-inst;
+at 170 SM × 4 inst/clk × 2.85 GHz = 1.94e12 inst/s → **57 µs pure-issue
+  time vs 83.6 µs byte-time → 56% issue-utilized at the measured 101.7 µs;
+FFMA-pipe share ≈ 8.5%**. Issue is NOT the binding term.
+- Therefore both registered C2 candidates are **REJECTED BY ANALYSIS**
+(falsifiable — see below):
+  - **LUT dequant**: replaces 1 FFMA/weight with 1 LDS/weight (issue
+    slots 1:1) + table-build cost that does NOT amortize at M=1 (per
+    256-weight block: 128-entry build ≈ 128 FFMA vs 256 direct dequant
+    FFMAs — the FLUTE win requires batch M to amortize; lit review: LUT
+    advantages are batch-regime-dependent).
+  - **W4A8/dp4a integer path**: cuts issue ~4× (byte-aligned LOP3 masks
+    + dp4a ≈ 1.0 inst/weight) but on a term measured at 56%/8.5% —
+    predicted ≤ 5% end-effect; also changes the numeric contract (INT8
+    activations) requiring a new gate methodology for a non-binding term.
+  - Registered falsifier for BOTH: if either is built and wins > 5%, the
+    SASS-derived issue model above is wrong — that is itself a finding and
+    the loser gets built and measured immediately.
+
+**Accounting claim (candidate v3 — warp-contiguous block mapping):**
+- Semantic op unchanged: y = W·x, Q4_K, same dequant expression tree
+  (summands stay bitwise-gated by the E0003 suite).
+- Bytes unchanged. Pattern changed: v2 assigns warp w the blocks
+  `w, w+4, w+8, …` (stride 4 = 576 B) — each row's 2304 B is consumed by 4
+  warps in interleaved strided chunks; v3 assigns warp w a CONTIGUOUS span
+  (`chunks = ceil(blocks_per_row/4)`, blocks `[w·chunks, (w+1)·chunks)`),
+  so each warp streams one contiguous region of the row: ~4× longer DRAM
+  bursts per stream, ~4× fewer interleaved sub-streams per row/page.
+- Mechanism: DRAM open-page/sector efficiency of the weight stream (the
+  same class of effect as the copy4 1810 GB/s vs v2 82% gap; and consistent
+  with E0005's residual being pattern-side, not issue-side).
+- Prediction (OC 1810 GB/s, M=2^16, K=4096, same bench): **88–97 µs**
+  (86–92% of ceiling). If the residual is instead x/scale L1-L2 traffic or
+  latency, expect ≤ 3 µs movement.
+- Falsifiers: (1) v3 ≥ 101.7 µs → warp-contiguity is not the term → record,
+  family stands at ~82% until ncu unblocks, and LUT/W4A8 stay rejected;
+  (2) v3 > ~91 µs win (>10%) → mechanism stronger than predicted → EXP8
+  claims a full layout/alignment redesign (SoA, 512-B aligned reads);
+  (3) achieved BW > 1810 GB/s → L2 residency/DCE — SASS + buffer audit;
+  (4) any bound-gate failure → correctness bug, stop.
+- Correctness: the warp→block mapping permutation changes the row's
+  accumulation ORDER → bitwise vs v2 is impossible by construction; gate =
+  cancellation-aware bound vs the sequential reference (E0004 policy,
+  |diff| ≤ 128·2⁻²⁴·Σ|wᵢxᵢ|, worst ratio recorded) + exact-zero edges +
+  determinism; per-lane summands remain bitwise-identical to the reference
+  dequant (E0003 suite retained).
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
