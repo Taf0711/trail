@@ -115,6 +115,25 @@ research notes, Feynman repair, lit review, plan spec.
 5. **Owner**: enable GPU performance counters; optionally install pandoc;
    run `feynman alpha login` already done ✓.
 
+## Late addendum (same day, ~04:00–04:40): EXP6 implemented + measured
+
+1. **Gates**: rebuild + `ctest` 43/43 (2 new composed cases: bitwise vs
+   v2 oracle across 4×4 shape×seed grid; edge-blocks-exact), memcheck 0,
+   racecheck 0. Bench-embedded bitwise gate green at all three sizes.
+2. **Measured (2 runs, medians ±0.2%)**: primary 2^28-total prediction
+   MISSED — composed 117.1 µs vs two-launch pair 105.2–105.4 µs
+   (**falsifiers 1 and 2 fired**, +11%); pair itself only +3.5–3.7 µs over
+   one full 2^28 v2 launch — the boundary was already hidden by pair
+   pipelining. Secondary prediction CONFIRMED: composed −15% at 2^26
+   (1503 GB/s = 83% OC, family best at that shape), −35% at 2^24.
+   **KEEP size-scoped; REJECT at primary scale.**
+3. **Merge-cost mechanism**: register pressure REJECTED via cuobjdump
+   res-usage (REG:40 vs v2's 39, no spills); DRAM dual-stream-interleaving
+   hypothesis recorded as open (ncu still blocked).
+4. Tooling note: the bash tool's hypa hook mangles nested cmd quoting on
+   this machine; `node -e` + `execSync`/`execFileSync` (or self-logging
+   .bat wrappers under `build/`) is the reliable workaround.
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:

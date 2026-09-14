@@ -10,6 +10,11 @@
 
 - **M0 done** (native Windows CUDA lab). **M1 done** (vector-add + launch/
   graph fundamentals + experiment machinery).
+- **C1/EXP6 done** (2026-09-14): composed GEMV measured — falsifiers 1+2
+  fired at the primary shape (+11% vs the two-launch pair), secondary
+  prediction confirmed (−15% at 2^26 total, −35% at 2^24); KEEP
+  size-scoped to the short-kernel regime. First exercise of the ledger's
+  COMPOSED stage.
 - **Quantized-GEMV family at 82% of the measured ceiling** (E0003 → E0004 →
   E0005); route-bytes + instruction-cost dual accounting model validated.
 - **M2 entry conditions met** (MARLIN-informed ladder specced, C3).
@@ -20,7 +25,7 @@
 
 ---
 
-## C1 — EXP6: composed GEMV launch (NEXT — claim registered)
+## C1 — EXP6: composed GEMV launch (DONE — size-scoped KEEP)
 
 **Goal**: delete the kernel boundary between back-to-back decode GEMVs
 (e.g. Q,K,V projections share one x): two weight matrices W₁[W₁rows×K],
@@ -42,7 +47,16 @@ row).
 **Done when**: results row + verdict in LEDGER/RESULTS; composed path
 KEEP/REJECT decision recorded.
 
-## C2 — EXP7: dequant-cost kernel variant (claim next)
+**Outcome (2026-09-14)**: falsifiers 1+2 fired at the primary 2^28-total
+shape — composed 117.1 µs vs pair 105.2–105.4 µs (+11%); the boundary was
+already hidden by near-perfect pair pipelining, and the merge costs 15%
+vs a single same-bytes v2 launch (register pressure ruled out via
+res-usage; DRAM dual-stream interleaving hypothesis open, ncu blocked).
+Secondary prediction confirmed: −15% at 2^26, −35% at 2^24 total.
+**KEEP size-scoped (≤ 2^26 total / pairs ≤ ~30 µs), REJECT at the E0005
+primary scale.** Full record: experiments/E0006_gemv_composed.md.
+
+## C2 — EXP7: dequant-cost kernel variant (NEXT — claim first)
 
 **Goal**: attack E0005's residual ~18% gap (issue-side dequant cost).
 Two candidate mechanisms, decision by measurement:

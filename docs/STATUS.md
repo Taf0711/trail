@@ -42,15 +42,19 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- None blocking. EXP5 (fast-decode tiled Q4_K GEMV) measured 101.7 µs
-  (1488 GB/s = 82.2% of the OC ceiling) — prediction hit, 6.5× over E0004.
-  The route-bytes + instruction-cost dual accounting model is now measured
-  on both terms.
+- None blocking. EXP6 (composed GEMV launch) measured 2026-09-14: falsifiers
+  1+2 fired at the primary 2^28-total shape (composed +11.1–11.3% vs the
+  two-launch pair — the boundary was already hidden by near-perfect pair
+  pipelining), but the secondary prediction confirmed: composed wins
+  −15% at 2^26 and −35% at 2^24 total weights. KEEP size-scoped (short-
+  kernel regime), REJECT at the E0005 primary scale. The COMPOSED ledger
+  stage proved its worth: a locally-verified boundary deletion is not a win.
 
 ## Next Smallest Step
 
-- **C1 / EXP6** (claimed): composed GEMV launch — implement per
-  experiments/LEDGER.md EXP6 claim; then C2/EXP7 decision (LUT vs W4A8).
+- **C2 / EXP7** (claim next): dequant-cost kernel variant — LUT (FLUTE/
+  SqueezeLLM) vs W4A8 INT8-tensor-core (QServe) decision experiment
+  attacking E0005's residual ~18% gap; claim before coding.
 - Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding

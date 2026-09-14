@@ -118,6 +118,12 @@
 | 2026-09-13 | **f32 GEMV (EXP4, block-per-row tiled)** | 2^28 w | 608.2 | 609.0 | 685.4 | µs | **1764 GB/s** | **97.4% OC** | 0 err | coalescing recovered the machine (2.65× vs E0003 f32); top of prediction band |
 | 2026-09-13 | **Q4_K GEMV (EXP4, block-per-row tiled)** | 2^28 w | 607.3 | 608.2 | 609.3 | µs | 249 GB/s | 13.7% OC | 0 err | same wall-clock as f32 tiled despite 7× fewer W bytes → instruction-issue bound (SASS: inlined branchy half→float + byte loads + PRMT per sub-block); worst diff/bound 0.035 |
 | 2026-09-13 | **Q4_K GEMV (EXP5, v2 warp-per-block, coalesced float4 x)** | 2^28 w | 99.7 | 101.7 | 148.0 | µs | **1488 GB/s** | **82.2% OC** | 0 err + racecheck 0 | prediction 93–139 µs HIT; 6.5× vs E0004 same-run; p5 stable 99.7 across 3 runs, p95 tail = desktop interference; SASS: LDG.E.128 x, no decode branches |
+| 2026-09-14 | **EXP6 two v2 launches (pair)** | 2 × 2^27 w | 104.0 | 105.2–105.4 | 107.9 | µs/pair | 1435–1438 GB/s | 79.3–79.5% OC | 0 err + racecheck 0 | composed-baseline; only +3.5–3.7 µs over one full 2^28 v2 launch (101.7) — the pair pipelines nearly perfectly |
+| 2026-09-14 | **EXP6 composed launch (2^28 total)** | 2 × 2^27 w | 115.6 | 117.1 | 117.7 | µs/launch | 1291 GB/s | 71.3–71.4% OC | 0 err + racecheck 0 | **falsifiers 1+2 fired: +11.1–11.3% vs pair**; prediction band 95–102 MISSED; REG:40 vs 39 no spills — merge cost mechanism open (ncu blocked); REJECT at this scale |
+| 2026-09-14 | EXP6 two v2 launches (pair, 2^26 total) | 2 × 2^25 w | 29.2 | 29.6–31.6 | 32.5 | µs/pair | 1197–1276 GB/s | 66–70% OC | (same binary) | boundary share ~20–30% of the pair |
+| 2026-09-14 | **EXP6 composed launch (2^26 total)** | 2 × 2^25 w | 25.1 | 25.2 | 25.5 | µs/launch | **1502–1503 GB/s** | **83.0–83.1% OC** | (same binary) | **−14.9 to −20.3% vs pair** — secondary prediction confirmed; family's best efficiency at this shape |
+| 2026-09-14 | EXP6 two v2 launches (pair, 2^24 total) | 2 × 2^23 w | 13.4 | 16.3–16.7 | 19.6 | µs/pair | 567–581 GB/s | 31–32% OC | (same binary) | boundary ≈ 35% of the pair |
+| 2026-09-14 | **EXP6 composed launch (2^24 total)** | 2 × 2^23 w | 10.7 | 10.8–10.9 | 11.6 | µs/launch | 866–876 GB/s | 48% OC | (same binary) | **−33.1 to −35.3% vs pair**; boundary+gap ≈ 5.4–5.9 µs (E0001: launch ≈ 4.5 µs) — KEEP size-scoped |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's
@@ -133,6 +139,7 @@ the ladder moves to boundaries (EXP2 fusion) and new kernel families.
 | 2026-08-23 | 610.88 | 13.3.73 | idle (re-run #2) | Windows 26200.8514, MSVC 19.44 |
 | 2026-09-03 | 610.88 | 13.3.73 | idle | same |
 | 2026-09-13 | 610.88 | 13.3.73 | idle, 30°C, OC active (mem 17001 MHz eff / core 2850 MHz held, verified under load) | same |
+| 2026-09-14 | 610.88 | 13.3.73 | idle before each run (util 0–1%, 31–32°C); OC config unchanged since 09-13 verification; EXP6 rows are same-run paired comparisons (clock-state-independent) | same |
 
 ## Baselines to compare against (public, same GPU class)
 

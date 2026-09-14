@@ -340,11 +340,31 @@ implementation).
 
 | Field | Baseline (2 × v2 launch) | Candidate (composed) |
 |---|---|---|
-| Median (2^28 weights total) | ~203 µs (2 × 101.7) | (pending) |
-| Status | LOCALLY VERIFIED | CLAIMED (code not yet written) |
+| Correctness | — | bitwise == v2 outputs (both y₁ and y₂), all shapes; ctest 43/43, memcheck 0, racecheck 0 |
+| Median 2^28 total | 105.2–105.4 µs (1435–1438 GB/s, 79.3–79.5% OC) | **117.1 µs (1291 GB/s, 71.3–71.4% OC)** — +11.1–11.3%, falsifiers 1 AND 2 fired |
+| Median 2^26 total | 29.6–31.6 µs (1197–1276 GB/s, 66–70%) | **25.2 µs (1502–1503 GB/s, 83.0–83.1%)** — −14.9 to −20.3% |
+| Median 2^24 total | 16.3–16.7 µs (567–581 GB/s, 31–32%) | **10.8–10.9 µs (866–876 GB/s, 48%)** — −33.1 to −35.3% |
+| SASS/res | — | REG:40 STACK:0 LOCAL:0 (v2: REG:39) — register-pressure merge-overhead hypothesis REJECTED |
+| Status | LOCALLY VERIFIED | **LOCALLY VERIFIED (KEEP, size-scoped: win ≤ 2^26 total, REJECT ≥ 2^27 per matrix)** |
 
-Full record: `experiments/E0006_gemv_composed.md` (to be created with
-implementation). Checkpoint: C1 in docs/ROADMAP.md.
+**Verdict (measured 2026-09-14, two runs, medians stable ±0.2%):** the
+primary prediction band (95–102 µs) MISSED high and falsifiers 1 and 2 both
+fired at the primary shape: composed 117.1 vs two-launch 105.2–105.4 µs
+(1.11×) at 2^28 total, and +15.1% vs E0005's single 2^28 launch (101.7).
+Mechanism check: register pressure ruled out by res-usage (40 vs 39 regs,
+no spills); x re-reads ruled out by design (x reads halved); remaining
+hypothesis — dual-stream DRAM interleaving breaking open-page locality vs
+the pair's sequential sweeps — is unresolvable until ncu is unblocked
+(open question, not a claim). Secondary prediction CONFIRMED: the composed
+win tracks the boundary share exactly (−15% at 2^26, −35% at 2^24, boundary
++ gap ≈ 4.4–6.4 µs, consistent with E0001's 4.5 µs launch cost). The pair
+pipelines nearly perfectly at 2^28 (+3.5–3.7 µs over one full launch) —
+the boundary the merge deleted was already hidden. Ledger lesson: the
+COMPOSED stage exists precisely for this — a locally-verified boundary
+deletion is not a win.
+
+Full record: `experiments/E0006_gemv_composed.md`. Checkpoint: C1 in
+docs/ROADMAP.md (closed). Next: C2/EXP7 dequant-cost claim.
 
 ## Ledger discipline (the rules)
 
