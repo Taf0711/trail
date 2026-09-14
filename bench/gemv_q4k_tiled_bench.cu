@@ -137,6 +137,12 @@ int main() {
         check_cuda(cudaMemcpy(tiled_f32.data(), d_y, tiled_f32.size() * sizeof(float),
                               cudaMemcpyDeviceToHost), "D2H");
 
+        trail::gemv_q4_k_tiled_v2(d_w_q4, d_x, d_y, kCheckRows, kCols);
+        check_cuda(cudaDeviceSynchronize(), "tiled v2 q4k check");
+        std::vector<float> tiled_v2_q4(kCheckRows);
+        check_cuda(cudaMemcpy(tiled_v2_q4.data(), d_y, tiled_v2_q4.size() * sizeof(float),
+                              cudaMemcpyDeviceToHost), "D2H");
+
         trail::gemv_q4_k(d_w_q4, d_x, d_y, kCheckRows, kCols);
         check_cuda(cudaDeviceSynchronize(), "seq q4k check");
         std::vector<float> seq_q4(kCheckRows);
@@ -173,6 +179,18 @@ int main() {
                 return EXIT_FAILURE;
             }
             if (bound_f > 0.0 && diff_f / bound_f > worst_ratio) { worst_ratio = diff_f / bound_f; }
+
+            trail::reference::dequantize_q4_k(
+                w_q4.data() + static_cast<std::size_t>(i) * blocks_per_row, blocks_per_row,
+                dq.data());
+            const double bound_v2 = trail::reference::dot_error_bound(dq.data(), x.data(), kCols);
+            const double diff_v2 = std::abs(static_cast<double>(tiled_v2_q4[i]) -
+                                            static_cast<double>(expected_q4[i]));
+            if (diff_v2 > bound_v2) {
+                std::fprintf(stderr, "FAIL: tiled v2 Q4_K exceeds error bound at row %d\n", i);
+                return EXIT_FAILURE;
+            }
+            if (bound_v2 > 0.0 && diff_v2 / bound_v2 > worst_ratio) { worst_ratio = diff_v2 / bound_v2; }
         }
         std::printf("correctness gate: PASS (seq q4k bitwise; tiled kernels within error "
                     "bound; worst diff/bound = %.3f)\n",
@@ -215,6 +233,9 @@ int main() {
                  nullptr);
     bench_kernel("E0004 q4k tiled         ", route_q4,
                  [&](cudaStream_t s) { trail::gemv_q4_k_tiled(d_w_q4, d_x, d_y, kRows, kCols, s); },
+                 nullptr);
+    bench_kernel("E0005 q4k tiled v2      ", route_q4,
+                 [&](cudaStream_t s) { trail::gemv_q4_k_tiled_v2(d_w_q4, d_x, d_y, kRows, kCols, s); },
                  nullptr);
 
     check_cuda(cudaFree(d_w_q4), "cudaFree w_q4");

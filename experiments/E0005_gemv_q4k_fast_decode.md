@@ -1,8 +1,8 @@
 # E0005 — Q4_K GEMV instruction-cost reduction (fast decode)
 
-> Status: CLAIMED (implementation not started). Follows E0004's finding that
-> the tiled Q4_K kernel is instruction-issue bound, not byte bound. Claim
-> written before coding, per experiments/LEDGER.md rule 1.
+> Status: COMPLETE (2026-09-13). Prediction HIT: v2 measured 101.7 µs median
+> (1488 GB/s, 82.2% of the OC ceiling) vs the 93–139 µs band — 6.5× over
+> E0004, 5.8× over E0003. KEEP. Claim written before coding.
 
 ## Question
 
@@ -90,7 +90,26 @@ becomes the binding constraint again — i.e. move achieved bandwidth from
 
 ## Conclusion
 
-(pending)
+**KEEP — prediction hit.** Measured 2026-09-13, three runs (150.2 / 101.2 /
+101.7 µs medians; first under desktop load; p5 = 99.6–99.8 µs across all
+three):
+
+| Kernel | Median | Achieved BW | % of OC ceiling |
+|---|---|---|---|
+| E0004 q4k tiled (same run) | 663.1 µs | 228 GB/s | 12.6% |
+| **E0005 q4k tiled v2** | **101.7 µs** | **1488 GB/s** | **82.2%** |
+
+Mechanism attribution: the coalesced float4 x mapping was the dominant fix
+(E0004's per-lane 32-float spans were 8× sector-amplified at L2); the
+branch-free decode and word-wise extraction removed the compile-time
+expansion SASS showed in E0004. SASS v2: LDG.E.128 x loads, dense FFMA,
+no decode branches.
+
+Correctness record: ctest 41/41; memcheck 0; racecheck 0 (shared-memory
+kernels now gated per docs/TESTING.md); fast decode verified bitwise
+against the full decoder over its entire supported domain (all normal +
+zero halves). Gate caught the first v2 cut missing the per-block x offset
+(b·256) before any timing.
 
 ## Follow-up
 

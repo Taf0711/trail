@@ -280,8 +280,32 @@ Full record: `experiments/E0004_gemv_q4k_tiled.md`.
 
 | Field | E0004 q4k tiled | E0005 q4k tiled v2 |
 |---|---|---|
-| Median | 608.2 µs (249 GB/s) | (pending) |
-| Status | LOCALLY VERIFIED | CLAIMED (code not yet written) |
+| Median | 608.2 µs (249 GB/s) | **101.7 µs (1488 GB/s, 82.2% of OC)** |
+| Sanitizer | memcheck 0 | memcheck 0 + racecheck 0 |
+| Gate | bound gate (worst 0.035) | bound gate (worst 0.001) + exhaustive fast-decode-vs-full test (all normal/zero halves bitwise) |
+| Status | LOCALLY VERIFIED | LOCALLY VERIFIED |
+
+**Verdict (measured 2026-09-13, three runs, medians 150.2/101.2/101.7 µs
+— first run taken under desktop load; p5 stable 99.6–99.8 µs across all
+three):**
+- **Prediction HIT**: 101.7 µs is inside the 93–139 µs band (0.6–0.9 of the
+  1810 GB/s ceiling); measured 82.2%, p5 ≈ 87%.
+- **6.5× vs E0004 same-run** (663.1 µs), **5.8× vs E0003** (585.9 µs).
+- What worked, per mechanism: the coalesced float4 x mapping (the dominant
+  fix — E0004's x loads were 8× sector-amplified) + branch-free normal-only
+  half decode + word-wise nibble extraction + once-per-lane qs loads.
+- Remaining gap to the f32 tiled twin (88.9% same-run): residual dequant
+  instruction cost and the p95 interference tail. The M\* route model now
+  has both terms measured: bytes AND issue slots.
+- Gate caught one bug pre-timing: v2's first cut omitted the per-block x
+  offset (b·256) — the differential bound gate flagged it immediately
+  (device reproduced the old reference-bug signature). Fast decode verified
+  exhaustive on its supported domain (all normal + zero halves, bitwise).
+
+**KEEP.** The quantized-GEMV family now has: E0003 (naive, Tier-0), E0004
+(pattern-fixed), E0005 (coalesced + cheap decode, 82% of ceiling). Next
+ladder step per follow-up: compose two GEMVs into one launch (boundary
+deletion at family level), or M2 GEMM foundations.
 
 Full record: `experiments/E0005_gemv_q4k_fast_decode.md` (to be created with
 implementation).

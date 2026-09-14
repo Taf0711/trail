@@ -42,15 +42,22 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- None blocking. EXP4 (block-per-row tiling) measured: f32 tiled hit 97.4%
-  of the OC ceiling (pattern fix confirmed); Q4_K tiled is instruction-issue
-  bound at 13.7% — dequant instruction cost cancels its byte savings.
+- None blocking. EXP5 (fast-decode tiled Q4_K GEMV) measured 101.7 µs
+  (1488 GB/s = 82.2% of the OC ceiling) — prediction hit, 6.5× over E0004.
+  The route-bytes + instruction-cost dual accounting model is now measured
+  on both terms.
 
 ## Next Smallest Step
 
-- **EXP5 — instruction-cost reduction** for the tiled Q4_K GEMV: vectorized
-  float4 x loads, cheap normal-only half decode, multiple rows per block.
-  Write the prediction in experiments/LEDGER.md before coding.
+- Compose two real GEMVs (e.g. QKV projection shape) into one launch
+  (boundary deletion at kernel-family level), or open M2 (naive GEMM →
+  tiling ladder). Either way: claim in the ledger first.
+
+## Owner actions outstanding
+
+- Enable NVIDIA GPU performance counters (NVIDIA control panel → Developer
+  → Manage GPU Performance Counters → allow) so ncu evidence can back the
+  issue-bound claims; currently blocked by ERR_NGPUCTRPERM.
 
 ## Native Windows Environment
 

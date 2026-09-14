@@ -117,6 +117,7 @@
 | 2026-09-13 | Q4_K GEMV (EXP3 candidate, one-thread/row) | 2^28 w | 537.4 | 592.9 | 615.8 | µs | 255 GB/s | 14.1% OC | 0 err | prediction 83.6–112 µs FAILED; still 2.73× faster than f32 baseline — byte deletion shows through a throttled pattern |
 | 2026-09-13 | **f32 GEMV (EXP4, block-per-row tiled)** | 2^28 w | 608.2 | 609.0 | 685.4 | µs | **1764 GB/s** | **97.4% OC** | 0 err | coalescing recovered the machine (2.65× vs E0003 f32); top of prediction band |
 | 2026-09-13 | **Q4_K GEMV (EXP4, block-per-row tiled)** | 2^28 w | 607.3 | 608.2 | 609.3 | µs | 249 GB/s | 13.7% OC | 0 err | same wall-clock as f32 tiled despite 7× fewer W bytes → instruction-issue bound (SASS: inlined branchy half→float + byte loads + PRMT per sub-block); worst diff/bound 0.035 |
+| 2026-09-13 | **Q4_K GEMV (EXP5, v2 warp-per-block, coalesced float4 x)** | 2^28 w | 99.7 | 101.7 | 148.0 | µs | **1488 GB/s** | **82.2% OC** | 0 err + racecheck 0 | prediction 93–139 µs HIT; 6.5× vs E0004 same-run; p5 stable 99.7 across 3 runs, p95 tail = desktop interference; SASS: LDG.E.128 x, no decode branches |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's
