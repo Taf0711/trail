@@ -79,6 +79,13 @@ Each entry: the concept, where I hit it in the code, the interview-ready sound b
   experiment vs the residual 18%), AWQ (mixed-precision compile pass),
   Sarathi-Serve (chunked prefill on one GPU), PagedAttention (M6 KV
   allocator), DistServe/Mooncake/FlashInfer (landscape).
+- `outputs/quantized-llm-decode-kernels.md` (tracked) — full verified lit
+  review (Feynman `lit` workflow, 2026-09-14) on quantized decode kernels +
+  chunked prefill, with provenance sidecar and source-reported-claims table.
+  Key additions over the reading list: QServe W4A8KV4 (20–90% dequant
+  overhead), SqueezeLLM, DeepSpeed-FastGen SplitFuse, CUTLASS mixed-dtype,
+  Blackwell tcgen05.mma LUT qualifiers, and a recommended-experiment set that
+  matches the ledger's gate discipline.
 
 ## Narrative for the interview ("walk me through a project")
 

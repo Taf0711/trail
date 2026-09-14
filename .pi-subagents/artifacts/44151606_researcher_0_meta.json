@@ -1,0 +1,205 @@
+{
+  "runId": "44151606",
+  "agent": "researcher",
+  "task": "Literature/source triage for review slug quantized-llm-decode-kernels. Focus on GPU kernel design for LLM autoregressive decode with weight-only quantized GEMV/GEMM: Q4/int4 weight streaming, fused dequantization, group scales/zero-points, Tensor Core use, LUT/lookup-table approaches. Find primary papers (2022-2026), official docs, and key repos. Return source-backed notes with URLs/IDs, what each source contributes, limitations, and which claims are safe. Save notes to notes/quantized-llm-decode-kernels-research-kernels.md if possible.\n\n---\nUpdate progress at: C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\progress\\44151606\\progress.md\n\n---\n**Output:**\nWrite your findings to exactly this path: C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\outputs\\44151606\\notes\\quantized-llm-decode-kernels-research-kernels.md\nThis path is authoritative for this run.\nIgnore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.",
+  "exitCode": 0,
+  "processSignal": "SIGTERM",
+  "usage": {
+    "input": 266756,
+    "output": 14729,
+    "cacheRead": 9125376,
+    "cacheWrite": 0,
+    "cost": 6.338338,
+    "turns": 69
+  },
+  "model": "openai-codex/gpt-5.5:high",
+  "attemptedModels": [
+    "openai-codex/gpt-5.5:high"
+  ],
+  "modelAttempts": [
+    {
+      "model": "openai-codex/gpt-5.5:high",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 266756,
+        "output": 14729,
+        "cacheRead": 9125376,
+        "cacheWrite": 0,
+        "cost": 6.338338,
+        "turns": 69
+      }
+    }
+  ],
+  "durationMs": 863345,
+  "toolCount": 68,
+  "launchContractDigest": "6a6e4d5212ea70bb47b49b42de36805382c77c269f227851414de3161bc333c5",
+  "launchResolvedExtensions": {
+    "version": 1,
+    "source": "launch-resolved",
+    "disableAmbientExtensions": false,
+    "runtime": [
+      "sha256:ffa954a5e02b4a80"
+    ],
+    "configured": [
+      "sha256:1e6ee4bbd8f59609"
+    ],
+    "effective": [
+      "sha256:ffa954a5e02b4a80",
+      "sha256:1e6ee4bbd8f59609"
+    ],
+    "omitted": {
+      "runtime": 0,
+      "configured": 0,
+      "effective": 0
+    }
+  },
+  "acceptance": {
+    "status": "checked",
+    "evidenceStatus": "checked",
+    "explicit": true,
+    "effectiveAcceptance": {
+      "level": "checked",
+      "explicit": true,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "changed-files",
+            "tests-added",
+            "commands-run",
+            "residual-risks",
+            "no-staged-files"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "changed-files",
+        "tests-added",
+        "commands-run",
+        "residual-risks",
+        "no-staged-files"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "changed-files",
+          "tests-added",
+          "commands-run",
+          "residual-risks",
+          "no-staged-files"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "id": "criterion:criterion-1",
+        "status": "passed",
+        "message": "Required criterion 'criterion-1' satisfied."
+      },
+      {
+        "id": "evidence:changed-files",
+        "status": "passed",
+        "message": "changed-files evidence present."
+      },
+      {
+        "id": "evidence:tests-added",
+        "status": "not-applicable",
+        "message": "tests-added evidence explicitly reported as not applicable."
+      },
+      {
+        "id": "evidence:commands-run",
+        "status": "passed",
+        "message": "commands-run evidence present."
+      },
+      {
+        "id": "evidence:residual-risks",
+        "status": "passed",
+        "message": "residual-risks evidence present."
+      },
+      {
+        "id": "evidence:no-staged-files",
+        "status": "passed",
+        "message": "no-staged-files evidence present."
+      },
+      {
+        "id": "no-staged-files",
+        "status": "passed",
+        "message": "No staged files detected."
+      }
+    ],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Concrete research findings written to C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\outputs\\44151606\\notes\\quantized-llm-decode-kernels-research-kernels.md; progress written to C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\progress\\44151606\\progress.md. No severity findings were applicable for this research-only task."
+        }
+      ],
+      "changedFiles": [
+        "C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\outputs\\44151606\\notes\\quantized-llm-decode-kernels-research-kernels.md",
+        "C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\progress\\44151606\\progress.md"
+      ],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "feynman alpha search \"quantized LLM inference int4 GEMV kernel dequantization\" --limit 5",
+          "result": "failed",
+          "summary": "Timed out; recorded as blocked in coverage status."
+        },
+        {
+          "command": "feynman alpha search \"Marlin Mixed-Precision Auto-Regressive LINear kernels INT4 LLM\" --limit 10",
+          "result": "failed",
+          "summary": "Timed out after 120s; primary arXiv/official sources used instead."
+        },
+        {
+          "command": "wc -l output research file and progress file && git status --short",
+          "result": "passed",
+          "summary": "Confirmed output file has 133 lines and progress file has 6 lines; git status showed only untracked artifact/runtime dirs."
+        },
+        {
+          "command": "git diff --cached --name-only",
+          "result": "passed",
+          "summary": "No staged files."
+        }
+      ],
+      "validationOutput": [
+        "Research artifact created with evidence table, findings, source IDs, limitations, coverage status, and sources section."
+      ],
+      "residualRisks": [
+        "No benchmarks or kernel builds were run; performance claims are source-reported.",
+        "Feynman alpha CLI searches timed out, so no alpha-derived metadata was included."
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "Added research notes artifact and progress artifact only.",
+      "reviewFindings": [
+        "no blockers"
+      ],
+      "manualNotes": ""
+    }
+  },
+  "effects": {
+    "fileMutation": {
+      "status": "not-applicable",
+      "expected": false,
+      "attempted": true
+    }
+  },
+  "transcriptPath": "C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\44151606_researcher_0_transcript.jsonl",
+  "timestamp": 1789370440029
+}

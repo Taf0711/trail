@@ -1,0 +1,201 @@
+{
+  "runId": "44151606",
+  "agent": "researcher",
+  "task": "Literature/source triage for review slug quantized-llm-decode-kernels. Focus on LLM serving prefill handling on one GPU: chunked prefill, prefill-decode interference, continuous batching, iteration-level scheduling, latency/throughput tradeoffs, vLLM/Sarathi/Sarathi-Serve/Orca/TensorRT-LLM/SGLang/DeepSpeed-FastGen/FlashInfer if relevant. Find primary papers, official docs, and repos. Return source-backed notes with URLs/IDs, what each source contributes, limitations, and safe claims. Save notes to notes/quantized-llm-decode-kernels-research-prefill.md if possible.\n\n---\nUpdate progress at: C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\progress\\44151606\\progress.md\n\n---\n**Output:**\nWrite your findings to exactly this path: C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\outputs\\44151606\\notes\\quantized-llm-decode-kernels-research-prefill.md\nThis path is authoritative for this run.\nIgnore any other output filename or output path mentioned elsewhere, including output destinations in the base agent prompt, system prompt, or task instructions.",
+  "exitCode": 0,
+  "processSignal": "SIGTERM",
+  "usage": {
+    "input": 163008,
+    "output": 8436,
+    "cacheRead": 1911808,
+    "cacheWrite": 0,
+    "cost": 2.024024,
+    "turns": 20
+  },
+  "model": "openai-codex/gpt-5.5:high",
+  "attemptedModels": [
+    "openai-codex/gpt-5.5:high"
+  ],
+  "modelAttempts": [
+    {
+      "model": "openai-codex/gpt-5.5:high",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 163008,
+        "output": 8436,
+        "cacheRead": 1911808,
+        "cacheWrite": 0,
+        "cost": 2.024024,
+        "turns": 20
+      }
+    }
+  ],
+  "durationMs": 421164,
+  "toolCount": 19,
+  "launchContractDigest": "55c9c9166d2c780af9cb327ab7c838a05aeedd8aa4bcc1a39be0fad67df2652b",
+  "launchResolvedExtensions": {
+    "version": 1,
+    "source": "launch-resolved",
+    "disableAmbientExtensions": false,
+    "runtime": [
+      "sha256:ffa954a5e02b4a80"
+    ],
+    "configured": [
+      "sha256:1e6ee4bbd8f59609"
+    ],
+    "effective": [
+      "sha256:ffa954a5e02b4a80",
+      "sha256:1e6ee4bbd8f59609"
+    ],
+    "omitted": {
+      "runtime": 0,
+      "configured": 0,
+      "effective": 0
+    }
+  },
+  "acceptance": {
+    "status": "checked",
+    "evidenceStatus": "checked",
+    "explicit": true,
+    "effectiveAcceptance": {
+      "level": "checked",
+      "explicit": true,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "changed-files",
+            "tests-added",
+            "commands-run",
+            "residual-risks",
+            "no-staged-files"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "changed-files",
+        "tests-added",
+        "commands-run",
+        "residual-risks",
+        "no-staged-files"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "changed-files",
+          "tests-added",
+          "commands-run",
+          "residual-risks",
+          "no-staged-files"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [
+      {
+        "id": "criterion:criterion-1",
+        "status": "passed",
+        "message": "Required criterion 'criterion-1' satisfied."
+      },
+      {
+        "id": "evidence:changed-files",
+        "status": "passed",
+        "message": "changed-files evidence present."
+      },
+      {
+        "id": "evidence:tests-added",
+        "status": "not-applicable",
+        "message": "tests-added evidence explicitly reported as not applicable."
+      },
+      {
+        "id": "evidence:commands-run",
+        "status": "passed",
+        "message": "commands-run evidence present."
+      },
+      {
+        "id": "evidence:residual-risks",
+        "status": "passed",
+        "message": "residual-risks evidence present."
+      },
+      {
+        "id": "evidence:no-staged-files",
+        "status": "passed",
+        "message": "no-staged-files evidence present."
+      },
+      {
+        "id": "no-staged-files",
+        "status": "passed",
+        "message": "No staged files detected."
+      }
+    ],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Research notes written to .pi-subagents/artifacts/outputs/44151606/notes/quantized-llm-decode-kernels-research-prefill.md with evidence table, findings, limitations, and coverage status; no severity-rated code findings applicable."
+        }
+      ],
+      "changedFiles": [
+        ".pi-subagents/artifacts/outputs/44151606/notes/quantized-llm-decode-kernels-research-prefill.md",
+        ".pi-subagents/artifacts/progress/44151606/progress.md"
+      ],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [
+        {
+          "command": "feynman alpha search ...",
+          "result": "failed",
+          "summary": "Timed out; paper triage continued via arXiv/USENIX/ACM/docs/GitHub."
+        },
+        {
+          "command": "git diff --cached --name-only && git status --short -- ...",
+          "result": "passed",
+          "summary": "Confirmed no staged files and showed output/progress files as untracked artifacts."
+        },
+        {
+          "command": "test -s .pi-subagents/artifacts/outputs/44151606/notes/quantized-llm-decode-kernels-research-prefill.md && wc -l ...",
+          "result": "passed",
+          "summary": "Confirmed output file exists and has 135 lines."
+        }
+      ],
+      "validationOutput": [
+        "Output file exists and is non-empty.",
+        "git diff --cached --name-only returned no staged files."
+      ],
+      "residualRisks": [
+        "Feynman alpha CLI timed out.",
+        "Runtime defaults for vLLM/SGLang/TensorRT-LLM may drift; recheck exact version docs before citing defaults."
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "Added research notes artifact and progress update.",
+      "reviewFindings": [
+        "no blockers"
+      ],
+      "manualNotes": "Full findings are in the requested output file."
+    }
+  },
+  "effects": {
+    "fileMutation": {
+      "status": "not-applicable",
+      "expected": false,
+      "attempted": true
+    }
+  },
+  "transcriptPath": "C:\\Users\\pre\\Documents\\Projects\\trail\\.pi-subagents\\artifacts\\44151606_researcher_1_transcript.jsonl",
+  "timestamp": 1789369997854
+}

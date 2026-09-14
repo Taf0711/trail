@@ -1,0 +1,15 @@
+{
+	"items": [
+		{
+			"id": "T-001",
+			"text": "Doctor pi agent: diagnose hypa CLI missing + full health sweep",
+			"status": "done",
+			"priority": "high",
+			"assignee": "Claude",
+			"createdAt": "2026-09-14T06:21:56.283Z",
+			"updatedAt": "2026-09-14T06:30:15.123Z",
+			"blockedBy": null
+		}
+	],
+	"counter": 1
+}

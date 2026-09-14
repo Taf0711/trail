@@ -5,6 +5,10 @@ compile_test.bat
 trail-approach-diagram.html
 *.obj
 
+# Feynman lit-review working internals (final reviews in outputs/ are tracked)
+outputs/.drafts/
+outputs/.plans/
+
 # Local-only research notes (third-party summaries; not published).
 # Project state, experiment records, results ledger, ADRs, and testing docs
 # ARE tracked.
