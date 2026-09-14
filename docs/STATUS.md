@@ -42,25 +42,29 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- EXP7 (warp-contiguous mapping) measured 2026-09-14: falsifier 1 fired
-  (101.5 vs 100.3 µs same-run — REJECT). The pre-coding SASS re-diagnosis
-  exonerated instruction issue (56% utilization, FFMA 8.5%), and the no-win
-  pattern variant exonerated warp stream interleaving — the quantized-GEMV
-  family wall is stable at ~83% (1490–1508 GB/s) across v2/v3/composed.
-  The surviving structural candidates: sector-straddle of the 144-B AoS
-  block, scalar scale/d requests, per-row x re-reads. LUT and W4A8/dp4a
-  stay REJECTED (issue term twice exonerated).
+- **Decode-GEMV family CLOSED (2026-09-14).** EXP7 (warp-contiguous) and
+  EXP8 (SoA-aligned) both fired falsifier 1 — the ~83% wall is stable
+  across every byte-stream reshaping (v2/v3/v4/composed). EXP8's reading:
+  the AoS interleaving is a feature (qs+meta share DRAM pages; SoA pays a
+  dual-stream penalty). Per the pre-registered branch, ~83% is ACCEPTED
+  as the family ceiling; the residual ~17% is DRAM-protocol/L2 request-mix
+  efficiency, resolvable only with ncu (owner action). **E0005 v2 is the
+  production decode kernel** (82–83.5% of the 1810 GB/s ceiling, bitwise-
+  and bound-gated, sanitizers clean); composed variant scoped to small
+  projections (≤ 2^26 total).
 
 ## Next Smallest Step
 
-- **EXP8 claim** (not yet registered): device-side SoA repacking of the
-  Q4_K block (qs / scales / d / dmin in separate aligned arrays — MARLIN-
-  style offline reshuffling at M=1). Identical warp mapping keeps the
-  accumulation order, making a bitwise-vs-v2 gate possible. Prediction
-  direction: 83% → 90–95% of the OC ceiling. Claim before coding.
-- Standing owner action: enable GPU performance counters (ncu) — three
-  open mechanism questions now depend on it (E0006 merge cost, E0007
-  residual, E0008 sector evidence).
+- **M2 (roadmap C3): GEMM/tensor-core ladder** — claim first: design the
+  MARLIN-informed benchmark matrix (batch sizes 1→128+ at model-realistic
+  N,K; measure where the M\* transition lands on sm_120 with our formats).
+  Ladder: naive → coalesced → shared-tiling → register tiling →
+  mma/wmma, every rung gated, TFLOPS recorded against the measured
+  488 TFLOPS mma ceiling.
+- Alternative by owner preference: pull M5 forward (Qwen3-1.7B loader per
+  ADR-0003) and build M2 against real model shapes.
+- Standing owner action: enable GPU performance counters (ncu) — closes
+  the E0006/E0007/E0008 open mechanism questions.
 - Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding

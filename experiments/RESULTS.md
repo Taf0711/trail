@@ -128,6 +128,11 @@
 | 2026-09-14 | **EXP7 v3 warp-contiguous (2^28)** | 2^28 w | 100.9 | 101.5 | 101.8 | µs | 1490 GB/s | 82.3% OC | 0 err + racecheck 0 | **falsifier 1 FIRED: +1.2% vs v2, prediction band 88–97 missed — REJECT**; family wall stable at ~83% across pattern variants; v3 p95 tail tighter (101.8 vs 124.3) but medians are the contract |
 | 2026-09-14 | EXP7 v2 (2^26) | 2^26 w | 25.1 | 25.1 | 25.2 | µs | 1505 GB/s | 83.1% OC | (same binary) | tie with v3 25.1 (83.3%) |
 | 2026-09-14 | EXP7 v2 (2^24) | 2^24 w | 9.6 | 10.1 | 12.0 | µs | 932 GB/s | 51.5% OC | (same binary) | v3 9.9 (53.0%) — +2%, noise-level |
+| 2026-09-14 | EXP8 v2 re-bench (paired baseline) | 2^28 w | 99.5 | 100.1 | 101.7 | µs | 1512 GB/s | 83.5% OC | 0 err + racecheck 0 | same-run pair for v4; v2 keeps winning re-benches (100.1–100.3 vs E0005's 101.7) |
+| 2026-09-14 | **EXP8 v4 SoA-aligned (2^28)** | 2^28 w | 103.2 | 103.7 | 105.5 | µs | 1458 GB/s | 80.6% OC | 0 err + racecheck 0 | **falsifier 1 FIRED: +3.6% vs v2 — REJECT**; AoS interleaving is a feature (qs+meta share DRAM pages); SoA separates the meta stream ~150 MB (dual-stream penalty, same class as EXP6 composed) |
+| 2026-09-14 | EXP8 v2 (2^26) | 2^26 w | 25.0 | 25.0 | 25.1 | µs | 1510 GB/s | 83.4% OC | (same binary) | v4 25.1 (83.2%) — tie |
+| 2026-09-14 | EXP8 v2 (2^24) | 2^24 w | 9.5 | 9.8 | 11.1 | µs | 966 GB/s | 53.4% OC | (same binary) | v4 9.5 (54.9%) — noise-level |
+| 2026-09-14 | **DECODE-GEMV FAMILY CLOSED** | — | — | — | — | — | — | — | — | ~83% accepted as the family ceiling (per EXP8 falsifier-1 branch): wall stable across v2/v3/v4/composed reshapes; E0005 v2 = production kernel; residual ~17% attributed to DRAM-protocol/L2 request mix (ncu-only); re-ranked to M2 |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's

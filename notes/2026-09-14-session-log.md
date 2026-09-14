@@ -155,6 +155,23 @@ research notes, Feynman repair, lit review, plan spec.
    identical warp mapping keeps accumulation order → bitwise-vs-v2 gate
    possible; prediction 90–95% of ceiling.
 
+## Addendum 3 (same day, ~12:00): EXP8 claimed, implemented, measured — decode-GEMV family CLOSED
+
+1. **EXP8 (v4 SoA-aligned)**: pure byte reshuffle, identical warp mapping →
+   bitwise-vs-v2 gate (the family's strongest). Gates: ctest 48/48 (repack
+   byte-exact round-trip, v4-vs-v2 bitwise across 4×4 shapes × 4 seeds,
+   edges), memcheck 0, racecheck 0, SASS committed.
+2. **Measured**: **falsifier 1 fired — v4 103.7 vs v2 100.1 µs same-run
+   (+3.6%, REJECT)**; tie at 2^26, noise at 2^24. Mechanism reading: AoS
+   interleaving is a FEATURE (qs+meta share DRAM pages); SoA separates
+   the meta stream ~150 MB → the EXP6-style dual-stream penalty.
+3. **Family conclusion**: the ~83% wall is stable across v2/v3/v4/
+   composed; per the pre-registered EXP8 falsifier-1 branch, ~83% is
+   ACCEPTED as the decode-GEMV family ceiling. Residual ~17% attributed
+   to DRAM-protocol/L2 request-mix efficiency (ncu-only). **E0005 v2 =
+   production decode kernel.** C2 closed; M2 (C3 GEMM/tensor-core ladder)
+   is next — or M5 pulled forward by owner preference.
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:

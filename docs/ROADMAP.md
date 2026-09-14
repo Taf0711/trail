@@ -15,7 +15,14 @@
   prediction confirmed (−15% at 2^26 total, −35% at 2^24); KEEP
   size-scoped to the short-kernel regime. First exercise of the ledger's
   COMPOSED stage.
-- **Quantized-GEMV family at 82% of the measured ceiling** (E0003 → E0004 →
+- **Decode-GEMV family CLOSED** (2026-09-14): EXP7 (warp-contig) and
+  EXP8 (SoA-aligned) both REJECTED — the ~83% wall is stable across all
+  reshapes and is ACCEPTED as the family ceiling per the pre-registered
+  falsifier branch. E0005 v2 = production decode kernel; composed
+  variant scoped ≤ 2^26. Issue cost, stream interleaving, and request/
+  sector overhead all falsified as the residual term (DRAM-protocol/L2
+  mix remains, ncu-only). **C2 closed — M2 (C3) is next.**
+- **Quantized-GEMV family at 82–83.5% of the measured ceiling** (E0003 → E0004 →
   E0005); route-bytes + instruction-cost dual accounting model validated.
 - **M2 entry conditions met** (MARLIN-informed ladder specced, C3).
 - **M5/M6 decisions recorded** (ADR-0003: dense Qwen3-1.7B first; hybrid
@@ -71,10 +78,15 @@ structural candidates: 144-B AoS sector straddle (~1.11x worst-case),
 scalar scale/d requests, per-row x re-reads. Full record:
 experiments/E0007_gemv_warp_contig.md.
 
-**Next (C2 follow-on / EXP8 claim):** device-side SoA repacking (qs/scales/
-d/dmin in separate aligned arrays, MARLIN-style offline reshuffling at
-M=1), identical warp mapping → bitwise-vs-v2 gate; prediction 90–95% of
-ceiling.
+**Outcome (2026-09-14): EXP8 SoA-aligned REJECTED too** — falsifier 1
+fired: v4 103.7 µs vs v2 100.1 same-run (+3.6%); the AoS interleaving is
+a feature (qs+meta share DRAM pages; SoA separates the meta stream
+~150 MB and pays the EXP6-style dual-stream penalty). Per the
+pre-registered branch: **~83% accepted as the decode-GEMV family ceiling;
+family CLOSED — E0005 v2 is the production kernel.** Issue cost, stream
+interleaving, and request/sector overhead all falsified as the residual
+term; the remainder is DRAM-protocol/L2 request-mix efficiency (ncu-only).
+Full record: experiments/E0008_gemv_soa.md. **C2 closed; M2 (C3) is next.**
 
 - **LUT dequant** (LUT-GEMM 2206.09557, FLUTE 2407.10960, SqueezeLLM
   2306.07629): table lookup replaces extract+scale+fma per weight; watch

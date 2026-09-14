@@ -481,6 +481,29 @@ Full record: `experiments/E0007_gemv_warp_contig.md`.
   for the same inputs (order-identical by construction); exact-zero edges;
   memcheck + racecheck + SASS before timing.
 
+**Measured (2026-09-14, paired same-run, GPU idle 0%/30 °C):**
+
+| Shape | v2 AoS | v4 SoA | verdict |
+|---|---|---|---|
+| 2^28 w (K=4096) | 100.1 µs med (1512 GB/s, 83.5%) | **103.7 µs (1458 GB/s, 80.6%)** | v4 +3.6% — **falsifier 1 FIRED** |
+| 2^26 w | 25.0 µs (83.4%) | 25.1 µs (83.2%) | tie |
+| 2^24 w | 9.8 µs (53.4%) | 9.5 µs (54.9%) | +3%, noise |
+
+Gates: ctest 48/48 (repack byte-exact round-trip + v4-vs-v2 BITWISE across
+4×4 shapes × 4 seeds + edges), memcheck 0, racecheck 0, SASS committed.
+**REJECT v4.** Mechanism reading: the AoS interleaving is a FEATURE — a
+block's qs and d/dmin/scales share DRAM pages; SoA separates the meta
+stream ~150 MB away, paying the same dual-stream penalty EXP6's composed
+kernel showed at scale. **Per the pre-registered falsifier-1 branch:
+~83% is ACCEPTED as the decode-GEMV family ceiling on this machine**;
+the residual ~17% is DRAM-protocol/L2 request-mix efficiency, ncu-only.
+**Re-rank (rule 5): the decode-GEMV family is CLOSED — E0005 v2 is the
+production kernel (82–83.5% of ceiling, 5.8–6.5× over the family's naive
+baselines); next claims belong to C3/M2 (GEMM/tensor-core ladder) or M5
+(loader) by owner preference.**
+
+Full record: `experiments/E0008_gemv_soa.md`.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
