@@ -42,19 +42,25 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- None blocking. EXP6 (composed GEMV launch) measured 2026-09-14: falsifiers
-  1+2 fired at the primary 2^28-total shape (composed +11.1–11.3% vs the
-  two-launch pair — the boundary was already hidden by near-perfect pair
-  pipelining), but the secondary prediction confirmed: composed wins
-  −15% at 2^26 and −35% at 2^24 total weights. KEEP size-scoped (short-
-  kernel regime), REJECT at the E0005 primary scale. The COMPOSED ledger
-  stage proved its worth: a locally-verified boundary deletion is not a win.
+- EXP7 (warp-contiguous mapping) measured 2026-09-14: falsifier 1 fired
+  (101.5 vs 100.3 µs same-run — REJECT). The pre-coding SASS re-diagnosis
+  exonerated instruction issue (56% utilization, FFMA 8.5%), and the no-win
+  pattern variant exonerated warp stream interleaving — the quantized-GEMV
+  family wall is stable at ~83% (1490–1508 GB/s) across v2/v3/composed.
+  The surviving structural candidates: sector-straddle of the 144-B AoS
+  block, scalar scale/d requests, per-row x re-reads. LUT and W4A8/dp4a
+  stay REJECTED (issue term twice exonerated).
 
 ## Next Smallest Step
 
-- **C2 / EXP7** (claim next): dequant-cost kernel variant — LUT (FLUTE/
-  SqueezeLLM) vs W4A8 INT8-tensor-core (QServe) decision experiment
-  attacking E0005's residual ~18% gap; claim before coding.
+- **EXP8 claim** (not yet registered): device-side SoA repacking of the
+  Q4_K block (qs / scales / d / dmin in separate aligned arrays — MARLIN-
+  style offline reshuffling at M=1). Identical warp mapping keeps the
+  accumulation order, making a bitwise-vs-v2 gate possible. Prediction
+  direction: 83% → 90–95% of the OC ceiling. Claim before coding.
+- Standing owner action: enable GPU performance counters (ncu) — three
+  open mechanism questions now depend on it (E0006 merge cost, E0007
+  residual, E0008 sector evidence).
 - Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding

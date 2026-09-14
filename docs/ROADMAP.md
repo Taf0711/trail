@@ -56,18 +56,25 @@ Secondary prediction confirmed: −15% at 2^26, −35% at 2^24 total.
 **KEEP size-scoped (≤ 2^26 total / pairs ≤ ~30 µs), REJECT at the E0005
 primary scale.** Full record: experiments/E0006_gemv_composed.md.
 
-## C2 — EXP7: decode-residual attack (NEXT — claim first)
+## C2 — EXP7: decode-residual attack (DONE — falsifier 1 fired, v3 REJECTED)
 
-**Re-diagnosed 2026-09-14 (pre-coding, SASS-derived — see LEDGER EXP7):**
-the "issue-side dequant cost" framing is stale after E0005 — v2 loop body
-counted at 106 warp-inst/256 weights → 56% issue-utilized, FFMA 8.5%;
-LUT and W4A8/dp4a both attack a non-binding term and are REJECTED BY
-ANALYSIS (registered falsifiably: either winning >5% falsifies the SASS
-issue model and gets built immediately). The registered candidate is
-**v3: warp-contiguous block mapping** (DRAM burst/stream granularity).
-Original C2 text (superseded, kept for the record): attack E0005's
-residual ~18% gap via LUT (FLUTE/SqueezeLLM) vs W4A8 (QServe), decision
-by measurement.
+**Re-diagnosed pre-coding (SASS-derived):** the "issue-side dequant cost"
+framing was stale after E0005 — v2 loop body counted at 106 warp-inst/256
+weights → 56% issue-utilized, FFMA 8.5%; LUT and W4A8/dp4a REJECTED BY
+ANALYSIS (falsifiably registered).
+
+**Measured 2026-09-14:** v3 warp-contiguous mapping falsified — 101.5 vs
+100.3 µs same-run at 2^28 (+1.2%), tie at 2^26, noise at 2^24. The family
+wall is stable at ~83% across v2/v3/composed pattern variants: issue
+(twice exonerated) and stream interleaving are not the term. Surviving
+structural candidates: 144-B AoS sector straddle (~1.11x worst-case),
+scalar scale/d requests, per-row x re-reads. Full record:
+experiments/E0007_gemv_warp_contig.md.
+
+**Next (C2 follow-on / EXP8 claim):** device-side SoA repacking (qs/scales/
+d/dmin in separate aligned arrays, MARLIN-style offline reshuffling at
+M=1), identical warp mapping → bitwise-vs-v2 gate; prediction 90–95% of
+ceiling.
 
 - **LUT dequant** (LUT-GEMM 2206.09557, FLUTE 2407.10960, SqueezeLLM
   2306.07629): table lookup replaces extract+scale+fma per weight; watch

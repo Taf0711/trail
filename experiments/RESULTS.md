@@ -124,6 +124,10 @@
 | 2026-09-14 | **EXP6 composed launch (2^26 total)** | 2 × 2^25 w | 25.1 | 25.2 | 25.5 | µs/launch | **1502–1503 GB/s** | **83.0–83.1% OC** | (same binary) | **−14.9 to −20.3% vs pair** — secondary prediction confirmed; family's best efficiency at this shape |
 | 2026-09-14 | EXP6 two v2 launches (pair, 2^24 total) | 2 × 2^23 w | 13.4 | 16.3–16.7 | 19.6 | µs/pair | 567–581 GB/s | 31–32% OC | (same binary) | boundary ≈ 35% of the pair |
 | 2026-09-14 | **EXP6 composed launch (2^24 total)** | 2 × 2^23 w | 10.7 | 10.8–10.9 | 11.6 | µs/launch | 866–876 GB/s | 48% OC | (same binary) | **−33.1 to −35.3% vs pair**; boundary+gap ≈ 5.4–5.9 µs (E0001: launch ≈ 4.5 µs) — KEEP size-scoped |
+| 2026-09-14 | EXP7 v2 re-bench (paired baseline) | 2^28 w | 99.5 | 100.3 | 124.3 | µs | 1508 GB/s | 83.3% OC | 0 err + racecheck 0 | same-run pair for v3; inside E0005 thermal band (101.7 ± 1.5) |
+| 2026-09-14 | **EXP7 v3 warp-contiguous (2^28)** | 2^28 w | 100.9 | 101.5 | 101.8 | µs | 1490 GB/s | 82.3% OC | 0 err + racecheck 0 | **falsifier 1 FIRED: +1.2% vs v2, prediction band 88–97 missed — REJECT**; family wall stable at ~83% across pattern variants; v3 p95 tail tighter (101.8 vs 124.3) but medians are the contract |
+| 2026-09-14 | EXP7 v2 (2^26) | 2^26 w | 25.1 | 25.1 | 25.2 | µs | 1505 GB/s | 83.1% OC | (same binary) | tie with v3 25.1 (83.3%) |
+| 2026-09-14 | EXP7 v2 (2^24) | 2^24 w | 9.6 | 10.1 | 12.0 | µs | 932 GB/s | 51.5% OC | (same binary) | v3 9.9 (53.0%) — +2%, noise-level |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's

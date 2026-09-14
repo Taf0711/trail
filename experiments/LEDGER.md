@@ -422,6 +422,29 @@ FFMA-pipe share ≈ 8.5%**. Issue is NOT the binding term.
   determinism; per-lane summands remain bitwise-identical to the reference
   dequant (E0003 suite retained).
 
+**Measured (2026-09-14, paired same-run, GPU idle 1%/31 °C):**
+
+| Shape | v2 strided | v3 contig | verdict |
+|---|---|---|---|
+| 2^28 w (K=4096) | 100.3 µs med (1508 GB/s, 83.3%) | **101.5 µs (1490 GB/s, 82.3%)** | v3 +1.2% — **falsifier 1 FIRED** |
+| 2^26 w | 25.1 µs (83.1%) | 25.1 µs (83.3%) | tie |
+| 2^24 w | 10.1 µs (51.5%) | 9.9 µs (53.0%) | +2%, noise |
+
+Gates: ctest 45/45 (2 new v3 cases, bound-gate worst ≤ 1.0), memcheck 0,
+racecheck 0, SASS committed. **REJECT v3.** The DRAM burst/stream-interleave
+hypothesis is falsified; the family wall is STABLE at ~83% (1490–1508 GB/s)
+across v2/v3/composed pattern variants. Consequences per the registered
+falsifier-1 branch: LUT and W4A8/dp4a STAY REJECTED (issue term now twice
+exonerated: SASS arithmetic + no-win pattern variant); the surviving
+structural candidates are sector-straddle of the 144-B AoS block (≈1.11×
+worst-case amplification), scalar scale/d requests, and per-row x re-reads.
+Next claim: **EXP8 — device-side SoA repacking** (qs/scales/d/dmin in
+separate aligned arrays, MARLIN-style offline reshuffling at M=1; identical
+warp mapping keeps accumulation order → bitwise-vs-v2 gate possible),
+prediction 90–95% of ceiling, band 95–100 µs.
+
+Full record: `experiments/E0007_gemv_warp_contig.md`.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

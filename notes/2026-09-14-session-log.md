@@ -134,6 +134,27 @@ research notes, Feynman repair, lit review, plan spec.
    this machine; `node -e` + `execSync`/`execFileSync` (or self-logging
    .bat wrappers under `build/`) is the reliable workaround.
 
+## Addendum 2 (same day, ~04:20–04:50): EXP7 claimed, implemented, measured
+
+1. **Pre-coding re-diagnosis**: counted the v2 loop body from the
+   committed E0005 SASS — 106 warp-inst/256-weight iteration → **56%
+   issue-utilized at 101.7 µs, FFMA share 8.5%** → C2's "issue-side
+   dequant cost" framing was stale (E0004-era). LUT and W4A8/dp4a
+   REJECTED BY ANALYSIS, falsifiably registered (>5% win falsifies the
+   model and the loser gets built).
+2. **v3 candidate** (warp-contiguous block spans, indexing-only change,
+   bound-gated since accumulation order changes): gates green — ctest
+   45/45, memcheck 0, racecheck 0, SASS committed.
+3. **Measured**: **falsifier 1 fired** — 101.5 vs 100.3 µs same-run at
+   2^28 (+1.2%), tie at 2^26, noise at 2^24. REJECT. The family wall is
+   stable at ~83% across v2/v3/composed — issue and stream-interleaving
+   both exonerated; the surviving structural candidates are 144-B AoS
+   sector straddle, scalar scale/d requests, and per-row x re-reads.
+4. **Next claim (EXP8)**: device-side SoA repacking — separate aligned
+   qs/scales/d/dmin arrays (MARLIN-style offline reshuffling at M=1);
+   identical warp mapping keeps accumulation order → bitwise-vs-v2 gate
+   possible; prediction 90–95% of ceiling.
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:
