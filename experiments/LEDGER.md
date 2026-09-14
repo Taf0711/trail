@@ -194,6 +194,28 @@ uses. Re-predict before coding.
 
 Full record: `experiments/E0003_gemv_q4k.md`.
 
+## EXP4 — Q4_K GEMV, block-per-row tiling (attack the pattern E0003 exposed)
+
+**Accounting claim (stated before coding):**
+- Bytes unchanged vs E0003; pattern changed: one block per row, thread t owns
+  sub-block t (16 B of qs at offset 16·t) → warp reads are coalesced; x read
+  cooperatively once per row (L1-cached); shared-memory tree reduction.
+- Prediction (OC 1810 GB/s, M=2^16, K=4096): Q4_K tiled **88–119 µs**
+  (0.70–0.95 of ceiling), f32 tiled 626–849 µs; 5.0–6.7× over E0003 Q4_K.
+- Falsifiers: <50% of ceiling → x-broadcast/L1 model wrong or reduction cost;
+  >1810 → L2 residency/DCE; f32 tiled ≈ E0003 f32 → pattern diagnosis wrong.
+- Correctness: dequant stays bitwise-gated; dot gate = justified ULP ≤ 32
+  tolerance vs sequential reference (tree order differs; summands bitwise
+  identical), measured max ULP recorded; exact-zero edges stay exact.
+
+| Field | E0003 one-thread/row | E0004 block-per-row |
+|---|---|---|
+| Q4_K median | 592.9 µs (255 GB/s) | (pending) |
+| f32 median | 1616.0 µs (665 GB/s) | (pending) |
+| Status | LOCALLY VERIFIED | CLAIMED (code not yet written) |
+
+Full record: `experiments/E0004_gemv_q4k_tiled.md`.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
