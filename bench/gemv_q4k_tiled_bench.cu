@@ -1,8 +1,8 @@
 // EXP4 benchmark: tiled (block-per-row) GEMV vs E0003 one-thread-per-row.
 // Same fixed methodology (experiments/RESULTS.md): CUDA events, 100-launch
 // warmup, 30 samples of 10 launches, p5/median/p95. Correctness gates run
-// before any timing (bitwise for the dequant path, ULP-bounded for the tiled
-// dot; full gates live in the test suites).
+// before any timing (bitwise for the sequential kernel; cancellation-aware
+// error bound for the tiled reductions — see docs/TESTING.md).
 
 #include "gemv_q4k.cuh"
 #include "gemv_q4k_tiled.cuh"

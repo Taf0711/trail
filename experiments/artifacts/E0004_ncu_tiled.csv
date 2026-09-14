@@ -1,0 +1,9 @@
+==PROF== Connected to process 26156 (C:\Users\pre\Documents\Projects\trail\build\trail_bench_gemv_tiled.exe)
+==ERROR== ERR_NVGPUCTRPERM - The user does not have permission to access NVIDIA GPU Performance Counters on the target device 0. For instructions on enabling permissions and to get more information see https://developer.nvidia.com/ERR_NVGPUCTRPERM
+==PROF== Disconnected from process 26156
+correctness gate: PASS (seq q4k bitwise; tiled kernels within error bound; worst diff/bound = 0.001)
+shape: M=65536 K=4096 (2^28 weights) | W_q4=151.0 MB W_f32=1073.7 MB
+E0003 f32 one-thread/row: p5=1746.9 median=1862.2 p95=1922.0 us | achieved=577 GB/s (31.9% of OC 1810)
+E0003 q4k one-thread/row: p5=573.4 median=610.5 p95=647.6 us | achieved=248 GB/s (13.7% of OC 1810)
+E0004 f32 tiled          : p5=662.9 median=741.7 p95=782.9 us | achieved=1448 GB/s (80.0% of OC 1810)
+E0004 q4k tiled         : p5=635.1 median=734.5 p95=774.1 us | achieved=206 GB/s (11.4% of OC 1810)

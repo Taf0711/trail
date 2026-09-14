@@ -156,20 +156,21 @@ inline void gemv_q4_k(const BlockQ4K* w, const float* x, int rows, int cols, flo
     }
 }
 
-// Error bound for reordered-summation GEMV implementations (e.g. tree
-// reductions) vs the sequential float reference: |diff| <= BOUND where
-// BOUND = 128 * 2^-24 * sum(|w_i * x_i|). The 128 factor covers per-element
-// fma rounding + reduction-tree reordering (worst case ~2n roundings of
-// 0.5 eps each at n=4096: 13 tree levels + 4096 accumulate roundings, each
-// 0.5 ulp of the running sum, referenced against sum|terms|). When all terms
-// are zero the bound is zero -> the result must be bitwise zero.
+// Error bound for reordered-summation GEMM/GEMV implementations (e.g. tree
+// reductions) vs the sequential float reference. Each of the ~2n roundings
+// (n element fmas + ~log2(n) tree levels) contributes <= u * |running sum| <=
+// u * sum(|w_i * x_i|) with unit roundoff u = 2^-24, so:
+//   |diff| <= 2n * u * sum(|w_i * x_i|)
+// When all terms are zero the bound is zero -> the result must be bitwise
+// zero. (Earlier revision used a fixed 128 constant — ~32x tighter than this
+// derivation; flagged by review and corrected. See experiments/E0004.)
 inline double dot_error_bound(const float* dequant_weights, const float* x, int n) {
     double sum_abs = 0.0;
     for (int i = 0; i < n; ++i) {
         sum_abs += std::abs(static_cast<double>(dequant_weights[i]) *
                             static_cast<double>(x[i]));
     }
-    return 128.0 * 0x1.0p-24 * sum_abs;
+    return 2.0 * static_cast<double>(n) * 0x1.0p-24 * sum_abs;
 }
 
 // Baseline reference: f32 matrix-vector product, one dependent FMA per

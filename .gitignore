@@ -3,6 +3,7 @@ build_trail.bat
 compile_test.bat
 /build/
 trail-approach-diagram.html
+*.obj
 
 # Local-only research notes (third-party summaries; not published).
 # Project state, experiment records, results ledger, ADRs, and testing docs

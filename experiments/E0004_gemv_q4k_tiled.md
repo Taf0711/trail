@@ -14,6 +14,13 @@ per-row streaming — recover the machine's bandwidth ceiling?
 
 ## Hypothesis (accounting claim, stated before coding)
 
+> **Deviation note (added post-implementation, flagged by review):** the
+> claim says thread t "reads its 16 qs bytes"; the implementation loads the
+> full 32-byte chunk per thread (2× LDG.128, each chunk read by its owning
+> thread pair). DRAM traffic is unchanged (L1 absorbs the duplicate), but
+> the per-thread instruction count is slightly higher than claimed —
+> consistent with, not contradicting, the issue-bound verdict.
+
 - **Semantic operation**: unchanged, `y = W·x` (Q4_K weights, f32 x/y).
 - **What changed vs E0003**: the memory pattern, not the bytes. Per row
   (K = 4096): one block of T = K/32 = 128 threads; thread t owns sub-block t

@@ -143,7 +143,12 @@ inline int capped_block_count(int rows, int block_size) {
     int sm_count = 0;
     check_cuda(cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, 0),
                "SM count query");
-    const long long machine_threads = static_cast<long long>(sm_count) * 1536;
+    int max_threads_per_sm = 0;
+    check_cuda(cudaDeviceGetAttribute(&max_threads_per_sm,
+                                      cudaDevAttrMaxThreadsPerMultiProcessor, 0),
+               "max threads per SM query");
+    const long long machine_threads =
+        static_cast<long long>(sm_count) * max_threads_per_sm;
     long long blocks = (static_cast<long long>(rows) + block_size - 1) / block_size;
     if (blocks * block_size > machine_threads) {
         blocks = machine_threads / block_size;

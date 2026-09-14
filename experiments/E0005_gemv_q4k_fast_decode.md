@@ -82,6 +82,12 @@ becomes the binding constraint again — i.e. move achieved bandwidth from
 - If falsifier 1 fires: ncu (issue-slot utilization, dram__throughput,
   l1tex/l2 hit rates) before touching code again.
 
+> **ncu status (2026-09-13, flagged by review):** ncu attempted on the E0004
+> bench; blocked by `ERR_NVGPUCTRPERM` — GPU performance counters require an
+> owner-level permission change (NVIDIA control panel / registry). The
+> issue-bound diagnosis therefore remains a SASS-derived estimate, not an
+> ncu measurement. Owner action required before ncu evidence can land.
+
 ## Conclusion
 
 (pending)

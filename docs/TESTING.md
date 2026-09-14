@@ -50,12 +50,15 @@ host reference).
   `fmaf(quant, dequant_scale, acc)` in the same accumulation order.
 - **Justified error bound** when the two sides legitimately differ in
   summation order (reduction trees, reassociation). The bound must account
-  for cancellation: `|device − reference| ≤ 128 · 2⁻²⁴ · Σ|wᵢ·xᵢ|`
+  for cancellation: `|device − reference| ≤ 2n · 2⁻²⁴ · Σ|wᵢ·xᵢ|`
   (`trail::reference::dot_error_bound`), NOT a fixed ULP-of-result budget —
   a result much smaller than the term magnitudes can differ by thousands of
-  its own ulps from a legitimate reorder. Bound is zero when all terms are
-  zero → result must be bitwise zero. Justification written next to the
-  gate; the measured worst |diff|/bound ratio is recorded.
+  its own ulps from a legitimate reorder, and NOT a fixed constant times
+  2⁻²⁴ (the original 128·2⁻²⁴ revision was ~32× tighter than its own
+  2n-rounding derivation — flagged by review, corrected; see E0004). Bound
+  is zero when all terms are zero → result must be bitwise zero.
+  Justification written next to the gate; the measured worst |diff|/bound
+  ratio is recorded.
 - **Bitwise within one binary** (same kernel rerun on same inputs) is still
   expected — nondeterminism is always a bug.
 
@@ -71,8 +74,10 @@ sm_120 V-scale swizzle bug passed local tests at 4× worse ΔNLL).
   on device; transfers excluded.
 - Warmup: 100 launches at full problem size (clock stabilization), then 30
   samples; report p5 / median / p95.
-- Correctness gate: bitwise differential test + `compute-sanitizer
-  --tool memcheck` = 0 errors, same day as the perf run.
+- Correctness gate: bitwise differential test (or the justified error bound
+  for reordered reductions) + `compute-sanitizer` — memcheck always,
+  **racecheck for shared-memory kernels** — 0 errors, same day as the perf
+  run.
 - Environment: driver, toolkit, GPU idle (`nvidia-smi`), GPU temperature
   recorded per row (thermal state is a benchmark confounder — see E0002
   Finding 4).
