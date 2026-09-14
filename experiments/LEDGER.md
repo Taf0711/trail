@@ -445,6 +445,42 @@ prediction 90–95% of ceiling, band 95–100 µs.
 
 Full record: `experiments/E0007_gemv_warp_contig.md`.
 
+## EXP8 — SoA repacked Q4_K layout (v4): attack the request/sector term
+
+**Accounting claim (stated before coding):**
+- Semantic op unchanged; values bitwise identical (pure byte reshuffle —
+  the repack copies d/dmin/scales/qs bytes verbatim into new arrays; the
+  E0003 dequant suite gates the repacked layout bitwise).
+- Bytes unchanged (144 B/block worth of data, re-laid-out as:
+  qs array 128 B/block — every block 32-B aligned → qs warp-reads span
+  exactly 4 sectors instead of 5 (the AoS read starts at +16 inside the
+  144-B struct and straddles); meta array 16 B/block [d|dmin|scales] —
+  row meta = 256 B = 8 sectors exact).
+- Per-ROW DRAM capacity is already exact in both layouts (2304 B = 72
+  sectors); the attackable term is REQUEST-level: per-block unmerged
+  straddle sectors + meta/qs temporal interleave (MSHR/LSU request
+  pressure: ~13 load warp-instructions per warp-iteration). Instruction
+  count and warp mapping are INTENTIONALLY identical to v2 — one
+  variable: the layout.
+- **Warp mapping kept = v2's strided assignment → accumulation order
+  identical → the gate is BITWISE device-vs-device vs v2** (the strongest
+  gate in the family; v2 itself bound-gated vs the reference).
+- Prediction (OC 1810 GB/s, M=2^16, K=4096, paired same-run vs v2 at
+  100.3 µs): **92–96 µs** (87–90% of ceiling) if request-level merging is
+  the residual term; ~100 µs (tie) if L2/DRAM already merges perfectly.
+- Falsifiers: (1) v4 ≥ v2 same-run median → request/sector overhead is
+  NOT the term → **accept ~83% as the family ceiling** (remaining
+  candidates — L2 x-traffic, DRAM-protocol physics — are ncu-only);
+  re-rank to M2 and record; (2) v4 win > 12% (< 88 µs) → mechanism
+  stronger than predicted → claim a deeper layout pass (per-row full
+  512-B streams, SoA scales pre-decode) as EXP9; (3) achieved BW > 1810
+  GB/s → L2 residency/DCE — audit; (4) any bitwise mismatch vs v2 or the
+  repack gate → correctness bug, stop.
+- Correctness: repack byte-equivalence gated (dequantize(SoA-repacked) ==
+  dequantize(AoS) bitwise via the E0003 suite); v4 outputs bitwise vs v2
+  for the same inputs (order-identical by construction); exact-zero edges;
+  memcheck + racecheck + SASS before timing.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
