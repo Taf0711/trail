@@ -42,16 +42,15 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- None blocking. EXP3 (quantized GEMV, one-thread-per-row) measured: both
-  kernels far under the bandwidth ceiling (Q4_K 255 GB/s = 14% of OC; f32
-  665 GB/s = 37%) — access-pattern-limited, falsifier fired. Verdict:
-  REJECT as baseline / KEEP as Tier-0 naive reference.
+- None blocking. EXP4 (block-per-row tiling) measured: f32 tiled hit 97.4%
+  of the OC ceiling (pattern fix confirmed); Q4_K tiled is instruction-issue
+  bound at 13.7% — dequant instruction cost cancels its byte savings.
 
 ## Next Smallest Step
 
-- **EXP4 — block-per-row tiling** for the Q4_K GEMV family (coalesced qs
-  loads, shared scales, warp reduction). Write the prediction in
-  experiments/LEDGER.md before coding, per the ledger discipline.
+- **EXP5 — instruction-cost reduction** for the tiled Q4_K GEMV: vectorized
+  float4 x loads, cheap normal-only half decode, multiple rows per block.
+  Write the prediction in experiments/LEDGER.md before coding.
 
 ## Native Windows Environment
 

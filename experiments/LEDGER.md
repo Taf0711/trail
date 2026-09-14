@@ -210,9 +210,39 @@ Full record: `experiments/E0003_gemv_q4k.md`.
 
 | Field | E0003 one-thread/row | E0004 block-per-row |
 |---|---|---|
-| Q4_K median | 592.9 µs (255 GB/s) | (pending) |
-| f32 median | 1616.0 µs (665 GB/s) | (pending) |
-| Status | LOCALLY VERIFIED | CLAIMED (code not yet written) |
+| Q4_K median | 592.9 µs (255 GB/s) | 608.2 µs (249 GB/s, 13.7% of OC) |
+| f32 median | 1616.0 µs (665 GB/s) | **609.0 µs (1764 GB/s, 97.4% of OC)** |
+| Sanitizer | 0 errors | 0 errors |
+| Gate | bitwise vs CPU ref | dequant bitwise (E0003 suite) + tiled dot within cancellation-aware error bound (worst diff/bound 0.035) |
+| Status | LOCALLY VERIFIED | LOCALLY VERIFIED |
+
+**Verdict (measured 2026-09-13, OC active):**
+- **f32 tiled: prediction validated and slightly beaten** (609 vs 626–849 µs;
+  97.4% of the 1810 GB/s ceiling). Coalescing fixes exactly what E0003
+  diagnosed — falsifier 3 did NOT fire, the pattern diagnosis stands. KEEP.
+- **Q4_K tiled: falsifier 1 fired again, for a NEW reason.** Same wall-clock
+  as f32 tiled (608 µs) while moving 7× fewer W bytes → the kernel is no
+  longer byte-bound, it is **instruction-issue bound**: ~93% of estimated
+  issue capacity (170 SM × 4/cyc × 2.85 GHz). SASS shows the cost: the
+  compiler inlines the full branchy half→float conversion (I2F/FMUL/FSEL/
+  BSSY subnormal-inf paths) per scale decode, per-thread scalar byte loads
+  for scales, PRMT nibble extraction — ~4–5 issued instructions per weight.
+  The route-bytes model is incomplete: bytes saved on W are paid back in
+  instruction slots for dequant arithmetic.
+- Correctness note: the pre-registered 32-ulp gate was **rejected during
+  calibration** (cancellation can make a legitimate reorder differ by
+  thousands of ulps of the result) and replaced with the
+  cancellation-aware bound |diff| ≤ 128·2⁻²⁴·Σ|wᵢxᵢ|; worst measured ratio
+  0.035. Recorded in docs/TESTING.md.
+- Kernel bug caught by the gate before timing: the tiled decode initially
+  treated sub-blocks as 16-byte-disjoint (they share the 32-byte chunk:
+  even sub-block = low nibbles, odd = high nibbles).
+
+**Q4_K tiled: KEEP as the pattern baseline, REJECT as final** — the family
+proceeds to **EXP5: instruction-cost reduction** (vectorized float4 x loads,
+cheap normal-only half decode or precomputed float scales outside the hot
+path, multiple rows per block to amortize x, fewer extract instructions per
+weight). Re-predict before coding.
 
 Full record: `experiments/E0004_gemv_q4k_tiled.md`.
 

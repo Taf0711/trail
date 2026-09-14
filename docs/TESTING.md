@@ -48,9 +48,16 @@ host reference).
   identical IEEE-754 operation sequence — e.g. vector-add (`a+b` on both
   sides), and quantized GEMV where both sides use explicit
   `fmaf(quant, dequant_scale, acc)` in the same accumulation order.
-- **Justified ULP/absolute tolerance** when the two sides legitimately differ
-  (different accumulation structure, reassociation, or mixed precision).
-  The tolerance and its justification must be written next to the assertion.
+- **Justified error bound** when the two sides legitimately differ in
+  summation order (reduction trees, reassociation). The bound must account
+  for cancellation: `|device − reference| ≤ 128 · 2⁻²⁴ · Σ|wᵢ·xᵢ|`
+  (`trail::reference::dot_error_bound`), NOT a fixed ULP-of-result budget —
+  a result much smaller than the term magnitudes can differ by thousands of
+  its own ulps from a legitimate reorder. Bound is zero when all terms are
+  zero → result must be bitwise zero. Justification written next to the
+  gate; the measured worst |diff|/bound ratio is recorded.
+- **Bitwise within one binary** (same kernel rerun on same inputs) is still
+  expected — nondeterminism is always a bug.
 
 Known failure mode this policy prevents: an AI-written kernel that passes
 needle-in-haystack smoke tests while diverging at scale (the Qwen3.8-27B

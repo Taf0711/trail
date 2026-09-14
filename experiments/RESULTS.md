@@ -115,6 +115,8 @@
 | 2026-09-04 | **EXP2 fused single kernel** | 2^26 | — | 456.0 | — | µs/kernel | **1766 GB/s** | — | 0 err | **saving 312.2 µs (40.6%)**; prediction ~300 µs held — route-bytes model validated |
 | 2026-09-13 | f32 GEMV (EXP3 baseline, one-thread/row) | 2^28 w | 1609.3 | 1616.0 | 1657.1 | µs | 665 GB/s | 36.7% OC | 0 err | prediction 593 µs FAILED — falsifier 1 fired: access-pattern-limited |
 | 2026-09-13 | Q4_K GEMV (EXP3 candidate, one-thread/row) | 2^28 w | 537.4 | 592.9 | 615.8 | µs | 255 GB/s | 14.1% OC | 0 err | prediction 83.6–112 µs FAILED; still 2.73× faster than f32 baseline — byte deletion shows through a throttled pattern |
+| 2026-09-13 | **f32 GEMV (EXP4, block-per-row tiled)** | 2^28 w | 608.2 | 609.0 | 685.4 | µs | **1764 GB/s** | **97.4% OC** | 0 err | coalescing recovered the machine (2.65× vs E0003 f32); top of prediction band |
+| 2026-09-13 | **Q4_K GEMV (EXP4, block-per-row tiled)** | 2^28 w | 607.3 | 608.2 | 609.3 | µs | 249 GB/s | 13.7% OC | 0 err | same wall-clock as f32 tiled despite 7× fewer W bytes → instruction-issue bound (SASS: inlined branchy half→float + byte loads + PRMT per sub-block); worst diff/bound 0.035 |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's

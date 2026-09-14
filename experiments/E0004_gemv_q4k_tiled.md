@@ -1,7 +1,10 @@
 # E0004 — Q4_K GEMV, block-per-row tiling (coalesced weight streaming)
 
-> Status: IN PROGRESS. Follows E0003's falsifier 1 directly. Claim written
-> before coding.
+> Status: COMPLETE (2026-09-13). SPLIT VERDICT: f32 tiled reached 97.4% of
+> the OC ceiling (pattern fix validated — KEEP); Q4_K tiled is
+> instruction-issue bound (13.7%, SASS: inlined half→float decode + byte
+> loads + PRMT per sub-block). Family continues with EXP5 (instruction-cost
+> reduction). Claim written before coding.
 
 ## Question
 
@@ -79,10 +82,40 @@ per-row streaming — recover the machine's bandwidth ceiling?
 
 ## Conclusion
 
-(pending)
+**SPLIT VERDICT** — measured 2026-09-13, OC active (mem 17001 eff / core
+2850 verified under load):
+
+| Kernel | Median | Achieved BW | % of OC ceiling |
+|---|---|---|---|
+| f32 tiled | 609.0 µs | **1764 GB/s** | **97.4%** |
+| Q4_K tiled | 608.2 µs | 249 GB/s | 13.7% |
+
+- **f32 tiled: KEEP.** Coalescing recovered the machine — the E0003 access-
+  pattern diagnosis is confirmed (falsifier 3 did not fire). Prediction band
+  626–849 µs, measured 609 µs.
+- **Q4_K tiled: falsifier 1 fired for a new reason.** Identical wall-clock to
+  f32 tiled with 7× fewer W bytes → instruction-issue bound (~93% of
+  estimated issue capacity). SASS: inlined branchy half→float decode,
+  scalar byte loads, PRMT nibble extraction — the dequant arithmetic's
+  instruction cost cancels Q4_K's byte savings. The route-bytes model must
+  be extended with an instruction-cost term for dequant-heavy kernels.
+
+Correctness record: ctest 38/38 (E0003 bitwise suite retained; tiled dot
+gated by the cancellation-aware bound, worst diff/bound 0.035); memcheck
+0 errors; SASS inspected. Gate-caught bug before timing: sub-blocks share
+the 32-byte chunk (low/high nibble split) — the first tiled decode treated
+them as 16-byte-disjoint.
+
+Gate-policy evolution (recorded in docs/TESTING.md): the pre-registered
+32-ulp-of-result gate was rejected at calibration — with cancellation it is
+not a valid reorder bound. Replaced by |diff| ≤ 128·2⁻²⁴·Σ|wᵢxᵢ|, exact when
+the bound is zero.
 
 ## Follow-up
 
-- If ceiling reached: the family moves to decode-shape composition (multi-row
-  blocks to amortize x, then fused patterns).
-- If not: multi-row blocks (EXP5) to amortize the per-row x read.
+- **EXP5 — instruction-cost reduction**: float4-vectorized x loads,
+  simplified normal-only half decode (or hoisted scale conversion),
+  multiple rows per block to amortize x traffic, fewer extraction
+  instructions per weight (byte→nibble via LOP3/PRMT on 32-bit words).
+  Target: Q4_K tiled within reach of the 1810 GB/s ceiling (≤ ~120 µs).
+  Re-predict in the ledger before coding.

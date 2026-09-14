@@ -156,6 +156,22 @@ inline void gemv_q4_k(const BlockQ4K* w, const float* x, int rows, int cols, flo
     }
 }
 
+// Error bound for reordered-summation GEMV implementations (e.g. tree
+// reductions) vs the sequential float reference: |diff| <= BOUND where
+// BOUND = 128 * 2^-24 * sum(|w_i * x_i|). The 128 factor covers per-element
+// fma rounding + reduction-tree reordering (worst case ~2n roundings of
+// 0.5 eps each at n=4096: 13 tree levels + 4096 accumulate roundings, each
+// 0.5 ulp of the running sum, referenced against sum|terms|). When all terms
+// are zero the bound is zero -> the result must be bitwise zero.
+inline double dot_error_bound(const float* dequant_weights, const float* x, int n) {
+    double sum_abs = 0.0;
+    for (int i = 0; i < n; ++i) {
+        sum_abs += std::abs(static_cast<double>(dequant_weights[i]) *
+                            static_cast<double>(x[i]));
+    }
+    return 128.0 * 0x1.0p-24 * sum_abs;
+}
+
 // Baseline reference: f32 matrix-vector product, one dependent FMA per
 // element in row-major order (matches gemv_f32_kernel bitwise).
 inline void gemv_f32(const float* w, const float* x, int rows, int cols, float* y) {
