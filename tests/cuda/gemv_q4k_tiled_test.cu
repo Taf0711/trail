@@ -13,6 +13,7 @@
 //   error; the sum-of-absolute-terms bound is.
 
 #include "gemv_q4k.cuh"
+#include "gemv_q4k_composed.cuh"
 #include "gemv_q4k_tiled.cuh"
 #include "trail/cuda_check.hpp"
 #include <catch2/catch_session.hpp>
@@ -187,6 +188,63 @@ double check_tiled_v2_q4k(const std::vector<BlockQ4K>& w_blocks,
         if (bound > 0.0 && diff / bound > worst) { worst = diff / bound; }
     }
     return worst;
+}
+
+// Run tiled-v2 Q4_K and return y (used as the bitwise oracle for the
+// composed kernel: identical accumulation order => bitwise-equal outputs).
+std::vector<float> run_tiled_v2_q4k(const std::vector<BlockQ4K>& w_blocks,
+                                    const std::vector<float>& x, int rows, int cols) {
+    BlockQ4K* d_w = nullptr;
+    float *d_x = nullptr, *d_y = nullptr;
+    check_cuda(cudaMalloc(&d_w, w_blocks.size() * 144), "malloc w");
+    check_cuda(cudaMalloc(&d_x, x.size() * sizeof(float)), "malloc x");
+    check_cuda(cudaMalloc(&d_y, rows * sizeof(float)), "malloc y");
+    check_cuda(cudaMemcpy(d_w, w_blocks.data(), w_blocks.size() * 144,
+                          cudaMemcpyHostToDevice), "H2D w");
+    check_cuda(cudaMemcpy(d_x, x.data(), x.size() * sizeof(float), cudaMemcpyHostToDevice),
+               "H2D x");
+    trail::gemv_q4_k_tiled_v2(d_w, d_x, d_y, rows, cols);
+    check_cuda(cudaDeviceSynchronize(), "tiled v2 run");
+    std::vector<float> y(rows);
+    check_cuda(cudaMemcpy(y.data(), d_y, rows * sizeof(float), cudaMemcpyDeviceToHost),
+               "D2H y");
+    check_cuda(cudaFree(d_w), "free w");
+    check_cuda(cudaFree(d_x), "free x");
+    check_cuda(cudaFree(d_y), "free y");
+    return y;
+}
+
+// Run the composed kernel on (W1, W2, x); returns {y1, y2}.
+std::pair<std::vector<float>, std::vector<float>> run_composed_q4k(
+    const std::vector<BlockQ4K>& w1_blocks, const std::vector<BlockQ4K>& w2_blocks,
+    const std::vector<float>& x, int rows, int cols) {
+    BlockQ4K *d_w1 = nullptr, *d_w2 = nullptr;
+    float *d_x = nullptr, *d_y1 = nullptr, *d_y2 = nullptr;
+    const std::size_t w_bytes = w1_blocks.size() * 144;
+    check_cuda(cudaMalloc(&d_w1, w_bytes), "malloc w1");
+    check_cuda(cudaMalloc(&d_w2, w2_blocks.size() * 144), "malloc w2");
+    check_cuda(cudaMalloc(&d_x, x.size() * sizeof(float)), "malloc x");
+    check_cuda(cudaMalloc(&d_y1, rows * sizeof(float)), "malloc y1");
+    check_cuda(cudaMalloc(&d_y2, rows * sizeof(float)), "malloc y2");
+    check_cuda(cudaMemcpy(d_w1, w1_blocks.data(), w_bytes, cudaMemcpyHostToDevice),
+               "H2D w1");
+    check_cuda(cudaMemcpy(d_w2, w2_blocks.data(), w2_blocks.size() * 144,
+                          cudaMemcpyHostToDevice), "H2D w2");
+    check_cuda(cudaMemcpy(d_x, x.data(), x.size() * sizeof(float), cudaMemcpyHostToDevice),
+               "H2D x");
+    trail::gemv_q4_k_composed(d_w1, d_w2, d_x, d_y1, d_y2, rows, cols);
+    check_cuda(cudaDeviceSynchronize(), "composed run");
+    std::vector<float> y1(rows), y2(rows);
+    check_cuda(cudaMemcpy(y1.data(), d_y1, rows * sizeof(float), cudaMemcpyDeviceToHost),
+               "D2H y1");
+    check_cuda(cudaMemcpy(y2.data(), d_y2, rows * sizeof(float), cudaMemcpyDeviceToHost),
+               "D2H y2");
+    check_cuda(cudaFree(d_w1), "free w1");
+    check_cuda(cudaFree(d_w2), "free w2");
+    check_cuda(cudaFree(d_x), "free x");
+    check_cuda(cudaFree(d_y1), "free y1");
+    check_cuda(cudaFree(d_y2), "free y2");
+    return {y1, y2};
 }
 
 }  // namespace
@@ -388,6 +446,57 @@ TEST_CASE("fast half decode matches full decoder on its supported domain",
         }
     }
     CHECK(mismatches == 0);
+}
+
+TEST_CASE("composed GEMV matches tiled-v2 bitwise over random inputs",
+          "[cuda][gemv][composed]") {
+    // Accumulation order is identical to v2 by design, so the gate is
+    // bitwise device-vs-device (v2 itself is bound-gated vs the reference
+    // by the cases above).
+    const int cols = GENERATE(256, 512, 1024, 4096);
+    const int rows = GENERATE(1, 3, 7, 64);
+    for (unsigned seed = 42; seed < 46; ++seed) {
+        std::mt19937 rng(seed);
+        std::vector<BlockQ4K> w1(static_cast<std::size_t>(rows) * (cols / QK4_K));
+        std::vector<BlockQ4K> w2(static_cast<std::size_t>(rows) * (cols / QK4_K));
+        fill_random_blocks(w1, rng);
+        fill_random_blocks(w2, rng);
+        std::vector<float> x(cols);
+        fill_random_vector(x, rng);
+        const auto v2_y1 = run_tiled_v2_q4k(w1, x, rows, cols);
+        const auto v2_y2 = run_tiled_v2_q4k(w2, x, rows, cols);
+        const auto [c_y1, c_y2] = run_composed_q4k(w1, w2, x, rows, cols);
+        for (int i = 0; i < rows; ++i) {
+            if (c_y1[i] != v2_y1[i]) {
+                FAIL("composed y1 mismatch at [" << i << "]: " << c_y1[i]
+                     << " vs v2 " << v2_y1[i] << " (cols=" << cols << " seed=" << seed << ")");
+            }
+            if (c_y2[i] != v2_y2[i]) {
+                FAIL("composed y2 mismatch at [" << i << "]: " << c_y2[i]
+                     << " vs v2 " << v2_y2[i] << " (cols=" << cols << " seed=" << seed << ")");
+            }
+        }
+    }
+}
+
+TEST_CASE("composed GEMV edge blocks are exact", "[cuda][gemv][composed]") {
+    constexpr int rows = 4;
+    constexpr int cols = 1024;
+    std::vector<BlockQ4K> w1(static_cast<std::size_t>(rows) * (cols / QK4_K));
+    std::vector<BlockQ4K> w2(static_cast<std::size_t>(rows) * (cols / QK4_K));
+    for (auto& blk : w1) { blk.d = 0; blk.dmin = 0; }
+    for (auto& blk : w2) { blk.d = 0; blk.dmin = 0; }
+    for (auto& q : w2[1].qs) { q = 0xFF; }
+    for (auto& s : w2[1].scales) { s = 0x3F; }
+
+    std::mt19937 rng(6);
+    std::vector<float> x(cols);
+    fill_random_vector(x, rng);
+    const auto [y1, y2] = run_composed_q4k(w1, w2, x, rows, cols);
+    for (int i = 0; i < rows; ++i) {
+        CHECK(y1[i] == 0.0F);
+        CHECK(y2[i] == 0.0F);
+    }
 }
 
 int main(int argc, char* argv[]) {
