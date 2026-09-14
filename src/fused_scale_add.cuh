@@ -10,7 +10,7 @@ namespace trail {
 
 // EXP2: fused chain d = (a + b) * k, elementwise.
 //
-// ACCOUNTING CLAIM (docs/LEDGER.md, stated before coding):
+// ACCOUNTING CLAIM (experiments/LEDGER.md, stated before coding):
 // - Semantic op: two chained elementwise ops, d = (a+b)*k.
 // - Two-kernel path B_route: read a, read b, write t (=a+b), read t, write d
 //   = 5 passes * 4 B/elt = 20 B/elt.

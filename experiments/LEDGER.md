@@ -1,0 +1,149 @@
+# Trail Experiment Ledger
+
+> Adapted from tinygrad-arkey's kernel lifecycle + route ledger, scaled to
+> Trail's size: one block per experiment, filled BEFORE coding (hypothesis
+> section), completed after. Status vocabulary: EXPERIMENTAL → LOCALLY
+> VERIFIED → COMPOSED → END-TO-END VERIFIED. A locally-verified candidate is
+> not a win; gains only count at the next stage up.
+>
+> Companion docs: `docs/TESTING.md` (gate sequence and methodology),
+> `experiments/RESULTS.md` (append-only benchmark rows), `docs/STATUS.md`
+> (current project state).
+
+## L0 — Hardware facts (measured, never spec-sheeted)
+
+| Fact | Value | Provenance | Date |
+|---|---|---|---|
+| Peak DRAM BW (spec) | 1.79 TB/s | spec sheet — reference only | — |
+| **Achievable BW (stock)** | **1519 GB/s = 84.9% of spec** | measured, bench/l0_microbench.cu, 2 runs within 0.1% | 2026-09-04 |
+| **Achievable BW (mem-OC, 17001 MHz effective)** | **1812 GB/s = 101.3% of spec** | same harness, after owner's memory overclock; effective clock read via nvidia-smi | 2026-09-04 |
+| FFMA peak R (vector ALU, stock) | 113.3 TFLOPS | zero-load 8-acc FMA loop (wmma_peak pattern) | 2026-09-04 |
+| FFMA peak R (mem-OC run) | 98.0 TFLOPS (−13.5%: SM clock dropped to 247–2602 MHz thermal/power shuffle during OC run) | same harness | 2026-09-04 |
+| Tensor-core peak R (mma fp16→fp32, stock) | **496.0 TFLOPS** (plateau 8 blocks/SM; 4.4x FFMA) | wmma 16x16x16 zero-load, HMMA.16816.F32 in SASS, grid-swept, 2 runs within 0.05% | 2026-09-04 |
+| Tensor-core peak R (mem-OC run) | 433.8 TFLOPS (plateau moved to 16 blocks/SM) | same harness | 2026-09-04 |
+| Crossover M* (Q4_K, w=4.5) | stock: ≈21 (FFMA R) / ≈92 (mma R); OC: ≈15 / ≈80 | computed from measured R/BW | 2026-09-04 |
+
+**Reading of the L0 numbers (2026-09-04):**
+- Stock: copy reaches 1519 GB/s (84.9% of spec); elementwise kernels
+  (vector-add) measure the same wall within noise. The 14–16% gap to spec is
+  DRAM physics, not kernel deficiency.
+- **Memory OC (retest 2026-09-04)**: +23% memory clock → 1812 GB/s measured
+  (101.3% of stock spec). Confirms the earlier ceiling was memory-clock-bound,
+  not DRAM-protocol-bound. Note: >100% of spec is now a *legitimate* reading
+  under OC — the roofline rule (">100% = measurement bug") applies to spec
+  clocks; under OC the denominator must be re-measured, which is what the
+  copy kernel does.
+- OC run also shows the compute side *degrading* (FFMA 113→98 TFLOPS, mma
+  496→434): initially attributed to power/thermal budget shift toward memory.
+  **Retest #2 (GPU cooled to 29°C) revised this**: FFMA recovered to 110.3,
+  mma to 481.8 TFLOPS — run #1's compute dip was mostly *thermal* (prior
+  benchmark heat), not the OC itself. At temperature, memory OC costs little
+  compute. Copy BW is unaffected (1806 vs 1812 GB/s, ±0.3%). Method lesson:
+  never attribute a dip to a config change without a cooled retest — thermal
+  state is a confounder.
+- **Benchmark rows under OC** (recorded below): vector-add f4 = 1779 GB/s
+  (98.9–99.4% of spec), scalar = 1770 GB/s. Under OC the kernels now scale
+  with the memory clock almost 1:1 (1539→1779 = +15.6% for +23% mem clock),
+  confirming they were memory-bound, exactly as the accounting claim said.
+- **M\* under OC: ≈15 (FFMA) / ≈80 (mma)** — decode classification unchanged.
+
+**Reading of the L0 numbers (2026-09-04, stock clocks — historical):**
+  1539 GB/s (float4) is *above* the copy number, within measurement variance
+  of the same wall (~84–86% of spec). Interpretation: a pure copy and pure
+  elementwise-add hit the same practical DRAM ceiling ≈ 84–86% of spec; the
+  remaining 14–16% is DRAM efficiency (refresh, bank conflicts, ECC-class
+  overheads), not kernel deficiency. Both kernels are effectively AT the
+  machine's streaming limit.
+- Cross-check: vector-add "86.0%" vs copy "84.9%" — the add is not faster
+  than a copy beyond noise; the 3-pass/2-pass difference is offset by the
+  copy's different access mix. Treat ≈1510–1540 GB/s as the machine's
+  practical elementwise ceiling.
+- **M\* ≈ 21 tokens (FFMA R) / ≈92 tokens (mma R)**: on the 5090, decode
+  (M=1) is deeply bandwidth-bound under either rate; prefill (M=512) is
+  compute-bound even with tensor cores. The 4.4x FFMA→mma ratio is the
+  §5 "unit choice" lever, measured for OUR part. (Tensor-core mma R will raise M*; the
+  decode classification is robust.)
+
+## EXP1 — float4 vectorized vector-add
+
+**Accounting claim (stated before coding, per tinygrad-arkey §0.5):**
+- Semantic operation: `C = A + B` (unchanged)
+- B_min: **unchanged** (same compulsory DRAM bytes)
+- B_route: **unchanged** (same global traffic — wider loads ≠ fewer bytes)
+- Binding resource: memory bandwidth (unchanged)
+- Mechanism: wider memory instructions (LDG.E.128 vs 2×LDG.E.32) → fewer
+  load/store instructions, potentially better achieved rate toward the
+  sustainable BW ceiling
+- Hypothesis: achieved BW increases only if instruction issue or MLP was
+  limiting, NOT if DRAM is the wall. **Predicted gain: 84.4% → 84–88%** (my
+  prediction: little-to-none; nvcc may already emit 128-bit loads)
+- Falsifier gate already run: scalar kernel SASS shows LDG.E (32-bit),
+  so the wider-load mechanism was available to attack.
+
+| Field | Baseline (scalar grid-stride) | Candidate (float4) |
+|---|---|---|
+| Correctness | bitwise vs CPU ref, 7 cases PASS | bitwise vs CPU ref, 7 cases PASS (50,034 assertions; tails 1/2/3/5/7/37/255/1025, exact-4 multiple, grid-stride multi-pass, ±0/inf edge) |
+| Sanitizer | 0 errors | 0 errors |
+| p5/med/p95 µs | 532.2 / 533.3 / 558.5 | 522.4 / 523.2 / 551.4 |
+| Achieved BW | 1510 GB/s (84.4% spec peak) | **1539 GB/s (86.0%)** |
+| SASS load/store | LDG.E ×2, STG.E ×1 (all 32-bit) | **LDG.E.128 ×2, STG.E.128 ×1** (+ scalar-tail LDG.E/STG.E) |
+| Registers/thread | (ncu — not yet) | (ncu — not yet) |
+| Occupancy | (ncu — not yet) | (ncu — not yet) |
+| Status | LOCALLY VERIFIED | **LOCALLY VERIFIED** (correctness+sanitizer+ISA+isolated timing complete) |
+
+**Verdict (measured 2026-09-04):** median 533.3 → 523.2 µs (**−1.9%**),
+84.4% → 86.0% of spec peak. Prediction band (84–88%) held: the win is small,
+consistent with DRAM remaining the wall. Mechanism confirmed real (SASS
+32-bit → 128-bit loads/stores) but worth ~2% here — instruction issue was
+only mildly limiting. **Keep**: same semantics, no downside, strictly better
+SASS. Also note: 86.0% is against the *spec* peak; once the copy-kernel
+measures true achievable BW, the efficiency number will rise (denominator
+shrink).
+
+**Composition note:** vector-add has no real consumer yet — composed/end-to-end
+stages are N/A until kernels join a route. First real composition test arrives
+with the fused-chain experiment or a real model route.
+
+## EXP2 — fused chain `d = (a+b)*k` (lever #4: delete a real boundary)
+
+**Accounting claim (stated before coding):**
+- Two-kernel path B_route: 20 B/elt (read a, read b, write t, read t, write d)
+- Fused path B_route: 12 B/elt (intermediate t never touches memory)
+- Deleted route bytes: the intermediate's write+read pair = 8 B/elt
+- Prediction at measured OC ceiling (1810 GB/s), 2^26 elements:
+  two-kernel ≈ 746 µs, fused ≈ 446 µs → **saving ≈ 300 µs (~40%)**
+- Falsifier: fused ≈ two-kernel would mean L2 absorbed the 256 MB
+  intermediate (not expected: L2 is ~96 MB)
+
+**Measured (2026-09-04, OC state, GPU idle, 28°C):**
+
+| Path | Median | Route | Status |
+|---|---|---|---|
+| Two-kernel (add, then scale) | 768.2 µs | 20 B/elt | LOCALLY VERIFIED |
+| Fused single kernel | 456.0 µs | 12 B/elt | LOCALLY VERIFIED |
+| **Fusion saving** | **312.2 µs (40.6%)** | 8 B/elt deleted | mechanism CONFIRMED |
+
+- Prediction vs measurement: predicted ~300 µs / ~40% → measured **312.2 µs
+  / 40.6%**. The route-byte accounting model predicted the outcome almost
+  exactly (within 4%).
+- Fused kernel achieved BW: 1766 GB/s — same streaming ceiling as EXP1's
+  vector-add (1780): the fused kernel is also AT the machine limit; the win
+  is entirely from moving fewer bytes, exactly as claimed.
+- Sanitizer memcheck: 0 errors both paths.
+- Composition note: still no real consumer — this validates the mechanism
+  and the ledger's predictive power, not end-to-end tokens.
+
+**Ledger takeaway:** two experiments, two accurate predictions (EXP1: little
+gain, DRAM wall; EXP2: ~300 µs from deleted boundary). The route-bytes
+accounting model is now empirically validated on this machine. The remaining
+ladder: grid-size sweep (low value — we're at the memory wall), CUDA Graphs
+at scale (small at 456 µs), then the quantized-GEMV kernel family.
+
+## Ledger discipline (the rules)
+
+1. No candidate is timed before its accounting claim is written down.
+2. Every perf claim needs an emitted-SASS observation (ISA proof).
+3. Measured vs projected vs spec — label every number's provenance.
+4. A kept candidate is only LOCALLY VERIFIED; composition and end-to-end are
+   separate, later gates.
+5. After any promotion, re-rank the ledger — the bottleneck moves.

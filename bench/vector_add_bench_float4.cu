@@ -1,5 +1,5 @@
 // EXP1 benchmark: float4 candidate, same fixed methodology as
-// vector_add_bench.cu (docs/RESULTS.md method section).
+// vector_add_bench.cu (experiments/RESULTS.md method section).
 
 #include "vector_add_float4.cuh"
 #include "trail/cuda_check.hpp"

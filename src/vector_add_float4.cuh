@@ -10,7 +10,7 @@ namespace trail {
 
 // EXP1 candidate: float4-vectorized vector-add.
 //
-// ACCOUNTING CLAIM (docs/LEDGER.md, stated before coding):
+// ACCOUNTING CLAIM (experiments/LEDGER.md, stated before coding):
 // - B_min unchanged, B_route unchanged: same compulsory DRAM bytes.
 //   Wider loads do NOT move fewer bytes; they issue fewer, wider
 //   instructions and give each thread more data in flight (more

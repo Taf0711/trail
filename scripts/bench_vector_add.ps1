@@ -1,4 +1,4 @@
-# Runs every M1 ladder experiment with the fixed methodology from bench/RESULTS.md.
+# Runs every M1 ladder experiment with the fixed methodology from experiments/RESULTS.md.
 # Usage: run in repo root from any shell; requires VS dev env for fresh builds.
 #   powershell -File scripts/bench_vector_add.ps1 [-Build]
 param(
@@ -30,7 +30,7 @@ if ($p5 -and $gb) {
            "$($p5.Matches[0].Groups[2].Value) | $($p5.Matches[0].Groups[3].Value) | " +
            "us/kernel | $($gb.Matches[0].Groups[1].Value) GB/s | " +
            "$($gb.Matches[0].Groups[2].Value)% | <SAN> | driver $driver |"
-    Write-Host "`nPaste into bench/RESULTS.md Results table:"
+    Write-Host "`nPaste into experiments/RESULTS.md Results table:"
     Write-Host $row
 }
 Write-Host "`nReminder: run sanitizer gate before recording:"
