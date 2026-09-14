@@ -8,6 +8,9 @@ trail-approach-diagram.html
 # Feynman lit-review working internals (final reviews in outputs/ are tracked)
 outputs/.drafts/
 outputs/.plans/
+.feynman/
+.pi-subagents/
+.pi/todo.json
 
 # Local-only research notes (third-party summaries; not published).
 # Project state, experiment records, results ledger, ADRs, and testing docs
