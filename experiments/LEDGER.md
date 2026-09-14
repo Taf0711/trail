@@ -139,6 +139,33 @@ accounting model is now empirically validated on this machine. The remaining
 ladder: grid-size sweep (low value — we're at the memory wall), CUDA Graphs
 at scale (small at 456 µs), then the quantized-GEMV kernel family.
 
+## EXP3 — Q4_K quantized GEMV (new kernel family: decode-shape weight streaming)
+
+**Accounting claim (stated before coding):**
+- Semantic op: `y = W·x`, W Q4_K (0.5625 B/weight), x/y f32; baseline = f32
+  GEMV, same kernel structure (one thread/row, sequential dot).
+- B_route: Q4_K ≈ 151.2 MB at 2^28 weights (W compulsory + y) vs f32 ≈
+  1074 MB. Dequant arithmetic ≈ 6.4 TFLOPS at ceiling BW — 5.8% of FFMA peak;
+  compute has ~17× headroom.
+- Prediction (OC denominator 1810 GB/s, M=2^16, K=4096): f32 ≈ 593 µs,
+  Q4_K ≈ 83.6 µs (band 88–112 µs; one-thread-per-row is not warp-coalesced),
+  **byte-deletion speedup ≈ 7.1×**.
+- Falsifiers: (1) <70% of ceiling → access-pattern-limited → EXP4 tiling;
+  (2) Q4_K ≈ f32 → arithmetic throttles; (3) above 1810 GB/s → measurement
+  bug (L2 residency or DCE).
+- Correctness: bitwise vs CPU reference via shared Q4_K format decoder and
+  identical explicit-fmaf accumulation order; known-value host tests +
+  randomized device differential + memcheck.
+
+| Field | Baseline (f32 GEMV) | Candidate (Q4_K GEMV) |
+|---|---|---|
+| Correctness | (pending) | (pending) |
+| Sanitizer | (pending) | (pending) |
+| Route bytes/weight | 4.0 B | 0.5625 B |
+| Status | — | CLAIMED (code not yet written) |
+
+Full record: `experiments/E0003_gemv_q4k.md`.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
