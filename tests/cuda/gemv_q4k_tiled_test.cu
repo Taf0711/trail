@@ -14,6 +14,7 @@
 
 #include "gemv_q4k.cuh"
 #include "gemv_q4k_composed.cuh"
+#include "gemv_q4k_soa.cuh"
 #include "gemv_q4k_tiled.cuh"
 #include "gemv_q4k_warp_contig.cuh"
 #include "trail/cuda_check.hpp"
@@ -262,6 +263,38 @@ double check_warp_contig_q4k(const std::vector<BlockQ4K>& w_blocks,
         if (bound > 0.0 && diff / bound > worst) { worst = diff / bound; }
     }
     return worst;
+}
+
+// Run the SoA-repacked (v4) kernel: repack AoS blocks host-side, upload,
+// run. Returns y. The repacked layout must reproduce v2 BITWISE (identical
+// warp mapping and accumulation order by construction).
+std::vector<float> run_soa_q4k(const std::vector<BlockQ4K>& w_blocks,
+                               const std::vector<float>& x, int rows, int cols) {
+    trail::Q4KSoA soa;
+    std::vector<uint8_t> qs_buf, meta_buf;
+    trail::repack_q4k_soa(w_blocks.data(), w_blocks.size(), &soa, &qs_buf, &meta_buf);
+    uint8_t *d_qs = nullptr, *d_meta = nullptr;
+    float *d_x = nullptr, *d_y = nullptr;
+    check_cuda(cudaMalloc(&d_qs, qs_buf.size()), "malloc qs");
+    check_cuda(cudaMalloc(&d_meta, meta_buf.size()), "malloc meta");
+    check_cuda(cudaMalloc(&d_x, x.size() * sizeof(float)), "malloc x");
+    check_cuda(cudaMalloc(&d_y, rows * sizeof(float)), "malloc y");
+    check_cuda(cudaMemcpy(d_qs, qs_buf.data(), qs_buf.size(), cudaMemcpyHostToDevice),
+               "H2D qs");
+    check_cuda(cudaMemcpy(d_meta, meta_buf.data(), meta_buf.size(),
+                          cudaMemcpyHostToDevice), "H2D meta");
+    check_cuda(cudaMemcpy(d_x, x.data(), x.size() * sizeof(float),
+                          cudaMemcpyHostToDevice), "H2D x");
+    trail::gemv_q4_k_soa(d_qs, d_meta, d_x, d_y, rows, cols);
+    check_cuda(cudaDeviceSynchronize(), "soa run");
+    std::vector<float> y(rows);
+    check_cuda(cudaMemcpy(y.data(), d_y, rows * sizeof(float), cudaMemcpyDeviceToHost),
+               "D2H y");
+    check_cuda(cudaFree(d_qs), "free qs");
+    check_cuda(cudaFree(d_meta), "free meta");
+    check_cuda(cudaFree(d_x), "free x");
+    check_cuda(cudaFree(d_y), "free y");
+    return y;
 }
 
 // Run the composed kernel on (W1, W2, x); returns {y1, y2}.
@@ -552,6 +585,78 @@ TEST_CASE("warp-contiguous Q4_K GEMV edge blocks are exact",
     check_cuda(cudaFree(d_w), "free w");
     check_cuda(cudaFree(d_x), "free x");
     check_cuda(cudaFree(d_y), "free y");
+    for (int i = 0; i < rows; ++i) {
+        CHECK(y[i] == 0.0F);
+    }
+}
+
+TEST_CASE("SoA repack is byte-exact (round-trip)", "[cuda][gemv][soa]") {
+    // The repack must copy every field verbatim; reconstruct BlockQ4K from
+    // the SoA buffers and compare against the original.
+    const int cols = 1024;
+    const int rows = 3;
+    std::mt19937 rng(31);
+    std::vector<BlockQ4K> blocks(static_cast<std::size_t>(rows) * (cols / QK4_K));
+    fill_random_blocks(blocks, rng);
+    trail::Q4KSoA soa;
+    std::vector<uint8_t> qs_buf, meta_buf;
+    trail::repack_q4k_soa(blocks.data(), blocks.size(), &soa, &qs_buf, &meta_buf);
+    for (std::size_t i = 0; i < blocks.size(); ++i) {
+        BlockQ4K back{};
+        for (int b = 0; b < 128; ++b) {
+            back.qs[b] = qs_buf[i * 128 + static_cast<std::size_t>(b)];
+        }
+        back.d = static_cast<uint16_t>(meta_buf[i * 16] | (meta_buf[i * 16 + 1] << 8));
+        back.dmin = static_cast<uint16_t>(meta_buf[i * 16 + 2] | (meta_buf[i * 16 + 3] << 8));
+        for (int s = 0; s < 12; ++s) {
+            back.scales[s] = meta_buf[i * 16 + 4 + s];
+        }
+        if (back.d != blocks[i].d || back.dmin != blocks[i].dmin ||
+            std::memcmp(back.scales, blocks[i].scales, 12) != 0 ||
+            std::memcmp(back.qs, blocks[i].qs, 128) != 0) {
+            FAIL("SoA repack is not byte-exact at block " << i);
+        }
+    }
+}
+
+TEST_CASE("SoA-repacked GEMV matches tiled-v2 bitwise over random inputs",
+          "[cuda][gemv][soa]") {
+    // EXP8 v4: identical warp mapping and accumulation order to v2 by
+    // construction, so the gate is bitwise device-vs-device.
+    const int cols = GENERATE(256, 512, 1024, 4096);
+    const int rows = GENERATE(1, 3, 7, 64);
+    for (unsigned seed = 42; seed < 46; ++seed) {
+        std::mt19937 rng(seed);
+        std::vector<BlockQ4K> blocks(static_cast<std::size_t>(rows) * (cols / QK4_K));
+        fill_random_blocks(blocks, rng);
+        std::vector<float> x(cols);
+        fill_random_vector(x, rng);
+        const auto v2_y = run_tiled_v2_q4k(blocks, x, rows, cols);
+        const auto soa_y = run_soa_q4k(blocks, x, rows, cols);
+        for (int i = 0; i < rows; ++i) {
+            if (soa_y[i] != v2_y[i]) {
+                FAIL("SoA y mismatch at [" << i << "]: " << soa_y[i] << " vs v2 "
+                     << v2_y[i] << " (cols=" << cols << " seed=" << seed << ")");
+            }
+        }
+    }
+}
+
+TEST_CASE("SoA-repacked GEMV edge blocks are exact", "[cuda][gemv][soa]") {
+    constexpr int rows = 4;
+    constexpr int cols = 1024;
+    std::vector<BlockQ4K> blocks(static_cast<std::size_t>(rows) * (cols / QK4_K));
+    for (auto& blk : blocks) {
+        blk.d = 0;
+        blk.dmin = 0;
+    }
+    for (auto& q : blocks[2].qs) { q = 0xFF; }
+    for (auto& s : blocks[2].scales) { s = 0x3F; }
+
+    std::mt19937 rng(11);
+    std::vector<float> x(cols);
+    fill_random_vector(x, rng);
+    const auto y = run_soa_q4k(blocks, x, rows, cols);
     for (int i = 0; i < rows; ++i) {
         CHECK(y[i] == 0.0F);
     }
