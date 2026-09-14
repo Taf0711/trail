@@ -74,6 +74,11 @@ Each entry: the concept, where I hit it in the code, the interview-ready sound b
   regression on AIME/HMMT), Q4_K GGUF with per-tier KLD + tail-percentile
   validation, hybrid 48/64 recurrent/attention blocks, MTP head at Q8_0.
   Candidate M5 target model; long-context tail-percentile methodology lesson.
+- `research-kernel-prefill-papers.md` (local) — reading list mapped to Trail's
+  measured state: MARLIN (M2 GEMM target), LUT-GEMM/FLUTE (next GEMV
+  experiment vs the residual 18%), AWQ (mixed-precision compile pass),
+  Sarathi-Serve (chunked prefill on one GPU), PagedAttention (M6 KV
+  allocator), DistServe/Mooncake/FlashInfer (landscape).
 
 ## Narrative for the interview ("walk me through a project")
 
