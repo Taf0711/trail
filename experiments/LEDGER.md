@@ -159,10 +159,38 @@ at scale (small at 456 µs), then the quantized-GEMV kernel family.
 
 | Field | Baseline (f32 GEMV) | Candidate (Q4_K GEMV) |
 |---|---|---|
-| Correctness | (pending) | (pending) |
-| Sanitizer | (pending) | (pending) |
+| Correctness | bitwise vs CPU ref, PASS | bitwise vs CPU ref, PASS (after 3 gate-caught bugs) |
+| Sanitizer | 0 errors | 0 errors |
 | Route bytes/weight | 4.0 B | 0.5625 B |
-| Status | — | CLAIMED (code not yet written) |
+| Median (M=2^16, K=4096) | 1616.0 µs | 592.9 µs |
+| Achieved BW | 665 GB/s (36.7% of OC) | 255 GB/s (14.1% of OC) |
+| Status | LOCALLY VERIFIED | LOCALLY VERIFIED |
+
+**Verdict (measured 2026-09-13, OC active — mem 17001 eff/core 2850 verified):**
+BOTH falsifier lines fired. f32: 1616 µs vs predicted 593 (665 GB/s, 37% of
+ceiling). Q4_K: 592.9 µs vs predicted 83.6–112 (255 GB/s, 14%). The
+one-thread-per-row pattern collapses bandwidth: each warp's 32 lanes read 32
+different rows (stride 2304 B), so every load instruction becomes 32 distinct
+sector-scattered transactions across 32 concurrent streams, and 65536 rows /
+170 SMs ≈ 12 warps/SM gives too little latency hiding to compensate.
+
+What DID validate:
+- **2.73× measured Q4_K-vs-f32 speedup** — byte deletion helps even through
+  a throttled pattern (7.1× would need the pattern fixed; bytes are still the
+  per-weight lever).
+- The correctness gate earned its keep: it caught (1) a kernel sub-block loop
+  reading past `qs` into the next block (masked in the first probe by fresh
+  cudaMalloc memory reading as zeros — probes must use dirty/oversized
+  buffers), (2) `qs_byte` treating a 32-byte chunk as one uint4, and (3) a
+  reference-side multi-block x-indexing bug — caught by a new host-vs-host
+  invariant (reference GEMV == dequantize+dot) now in the unit suite.
+
+**REJECT as production baseline; KEEP as Tier-0 naive reference.** Route-bytes
+accounting still governs, but EXP3's lesson: bytes × pattern interact — a
+pattern that wastes transactions makes the byte lever irrelevant. Next:
+**EXP4 — block-per-row tiling** (a warp/block cooperates on one row →
+coalesced qs loads + shared scales), the structure llama.cpp's gemv_q4_K
+uses. Re-predict before coding.
 
 Full record: `experiments/E0003_gemv_q4k.md`.
 

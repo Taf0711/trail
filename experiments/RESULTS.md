@@ -113,6 +113,8 @@
 | 2026-09-04 | vector_add scalar (OC #15) | 2^26 | 454.189 | 455.318 | 491.104 | µs/kernel | 1769 GB/s | 98.8% | n/a | 15-run mean ≈1765 |
 | 2026-09-04 | **EXP2 two-kernel path (add→scale, 20 B/elt)** | 2^26 | — | 768.2 | — | µs/composed | 1584 GB/s eff. | — | 0 err | baseline for fusion comparison |
 | 2026-09-04 | **EXP2 fused single kernel** | 2^26 | — | 456.0 | — | µs/kernel | **1766 GB/s** | — | 0 err | **saving 312.2 µs (40.6%)**; prediction ~300 µs held — route-bytes model validated |
+| 2026-09-13 | f32 GEMV (EXP3 baseline, one-thread/row) | 2^28 w | 1609.3 | 1616.0 | 1657.1 | µs | 665 GB/s | 36.7% OC | 0 err | prediction 593 µs FAILED — falsifier 1 fired: access-pattern-limited |
+| 2026-09-13 | Q4_K GEMV (EXP3 candidate, one-thread/row) | 2^28 w | 537.4 | 592.9 | 615.8 | µs | 255 GB/s | 14.1% OC | 0 err | prediction 83.6–112 µs FAILED; still 2.73× faster than f32 baseline — byte deletion shows through a throttled pattern |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's
@@ -127,6 +129,7 @@ the ladder moves to boundaries (EXP2 fusion) and new kernel families.
 |---|---|---|---|---|
 | 2026-08-23 | 610.88 | 13.3.73 | idle (re-run #2) | Windows 26200.8514, MSVC 19.44 |
 | 2026-09-03 | 610.88 | 13.3.73 | idle | same |
+| 2026-09-13 | 610.88 | 13.3.73 | idle, 30°C, OC active (mem 17001 MHz eff / core 2850 MHz held, verified under load) | same |
 
 ## Baselines to compare against (public, same GPU class)
 

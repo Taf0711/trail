@@ -1,8 +1,9 @@
 # E0003 — Quantized GEMV (Q4_K weight streaming)
 
-> Status: IN PROGRESS. Family entry: first kernel of the quantized-GEMV
-> family (the ladder's next target after EXP2 closed the fusion question).
-> Claim written before coding, per experiments/LEDGER.md rule 1.
+> Status: COMPLETE (2026-09-13). Falsifier 1 fired: one-thread-per-row is
+> access-pattern-limited, not byte-limited. Verdict: REJECT as baseline, KEEP
+> as Tier-0 naive reference. Family continues with EXP4 (block-per-row
+> tiling). Claim written before coding, per experiments/LEDGER.md rule 1.
 
 ## Question
 
@@ -85,11 +86,40 @@ that decode-time LLM inference actually uses?
 
 ## Conclusion
 
-(pending)
+**REJECT (as the family's production baseline) / KEEP (as Tier-0 naive
+reference)** — measured 2026-09-13, OC active:
+
+| Kernel | Median | Achieved BW | % of OC ceiling |
+|---|---|---|---|
+| f32 GEMV | 1616.0 µs | 665 GB/s | 36.7% |
+| Q4_K GEMV | 592.9 µs | 255 GB/s | 14.1% |
+
+Both falsifier lines fired. Predicted 593/83.6 µs (band 88–112); the
+75–95%-of-ceiling band assumed dense streaming would carry the uncoalesced
+pattern — it does not: per-instruction scatter across 32 rows plus ~12 warps
+of resident parallelism leaves both DRAM row locality and latency hiding
+starved. The byte lever is real (2.73× Q4_K vs f32) but capped by the pattern.
+
+Correctness record: 34/34 ctest (unit + device differential, bitwise),
+memcheck 0 errors, SASS inspected (FFMA chains live, LDG verified, no DCE).
+Three bugs were caught by the gate sequence and fixed before any timing:
+sub-block loop overrun (s 0..7 → 0..3), uint4 chunk indexing in qs_byte, and
+a reference-side per-block x-index bug (caught by the new reference ==
+dequantize+dot host invariant).
+
+Method lessons (recorded in docs/TESTING.md context):
+1. Fresh cudaMalloc memory reads as zeros — a probe can "pass" on an
+   out-of-bounds bug. Probes/tests must reuse or dirty buffers.
+2. An OOB read that lands on structurally valid memory (the next block's
+   header) produces plausible values — element-0 probes pass while later
+   elements are garbage; dump element-wise, don't trust single probes.
+3. The reference needs its own differential invariant (vs an independent host
+   path); a buggy reference makes the correct kernel look wrong and vice
+   versa.
 
 ## Follow-up
 
-- If coalescing-limited → EXP4: block-per-row tiling (lanes read consecutive
-  blocks → coalesced) and/or warp reduction.
-- Family next steps after route validation: fused dequant+scale patterns,
-  then M* sanity on a realistic model route.
+- **EXP4 — block-per-row tiling**: one block cooperates on a row; lanes read
+  consecutive qs chunks (coalesced), scales live in shared memory/registers,
+  warp-reduce the partial dots. Prediction to be written in the ledger before
+  coding. Target: ≥80% of the 1810 GB/s ceiling for Q4_K GEMV.

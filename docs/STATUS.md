@@ -42,11 +42,16 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- None blocking — waiting on the owner to attempt the CUDA vector-add kernel itself (per the learning rule, kernel design starts with a human attempt, then AI review).
+- None blocking. EXP3 (quantized GEMV, one-thread-per-row) measured: both
+  kernels far under the bandwidth ceiling (Q4_K 255 GB/s = 14% of OC; f32
+  665 GB/s = 37%) — access-pattern-limited, falsifier fired. Verdict:
+  REJECT as baseline / KEEP as Tier-0 naive reference.
 
 ## Next Smallest Step
 
-- M1 baseline is benchmarked and reproducible (experiments/RESULTS.md, scripts/bench_vector_add.ps1). Next: EXP1 — float4 vectorized loads. Before running it, write the predicted GB/s into RESULTS.md notes (splice-method prediction game), then implement in a copy of the kernel (`src/vector_add_float4.cuh`), differential-test, sanitize, and append a row via the bench script.
+- **EXP4 — block-per-row tiling** for the Q4_K GEMV family (coalesced qs
+  loads, shared scales, warp reduction). Write the prediction in
+  experiments/LEDGER.md before coding, per the ledger discipline.
 
 ## Native Windows Environment
 
