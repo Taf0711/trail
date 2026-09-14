@@ -310,6 +310,42 @@ deletion at family level), or M2 GEMM foundations.
 Full record: `experiments/E0005_gemv_q4k_fast_decode.md` (to be created with
 implementation).
 
+## EXP6 — composed GEMV launch (boundary deletion at family level)
+
+**Accounting claim (stated before coding):**
+- Semantic op: `y₁ = W₁·x`, `y₂ = W₂·x` — two weight matrices (Q,K,V-proj
+  shape), one x, ONE kernel launch instead of two back-to-back launches.
+- B_route: unchanged weight bytes (both W read once, compulsory). Deleted:
+  one launch boundary + one duplicate x pass (x is re-read per launch; in
+  the composed kernel each block reads x once and applies it to both
+  matrices it owns).
+- Baseline (measured, E0005): two v2 launches ≈ 2 × ~101.7 µs at
+  2 × 2^28 weights. Per E0001, plain launch overhead ≈ 4.5 µs (one of two
+  boundaries deleted); tail/scheduler gaps between dependent launches are
+  the unknown term the experiment measures.
+- Prediction (OC state, W₁ = W₂ = 2^27 weights so total stays 2^28 for a
+  clean same-bytes comparison): composed ≈ 101.7 µs ± boundary+gap savings;
+  expected band **95–102 µs** (≤ ~6% win — the boundary is small at 100 µs
+  scale; the point is to measure it, not to expect EXP2's 40%). Secondary
+  prediction: gap grows with shorter kernels (boundary share is
+  size-dependent — also measure at 2^26 and 2^24 total weights).
+- Falsifiers: (1) composed ≥ two-launch time → boundary deletion has no
+  value at this scale at decode shapes → record and stop pushing fusion at
+  GEMV scale; (2) composed > ~1.10 × two-launch → overhead introduced by
+  the merge (register pressure, x re-reads) — inspect SASS/ncu; (3) any
+  output bitwise mismatch → correctness bug, stop.
+- Correctness: per-kernel outputs bitwise vs reference (same E0005 suites
+  extended with the two-matrix case); composed accumulation within the
+  cancellation-aware bound; memcheck + racecheck + SASS before timing.
+
+| Field | Baseline (2 × v2 launch) | Candidate (composed) |
+|---|---|---|
+| Median (2^28 weights total) | ~203 µs (2 × 101.7) | (pending) |
+| Status | LOCALLY VERIFIED | CLAIMED (code not yet written) |
+
+Full record: `experiments/E0006_gemv_composed.md` (to be created with
+implementation). Checkpoint: C1 in docs/ROADMAP.md.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

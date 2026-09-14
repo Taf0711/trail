@@ -49,11 +49,9 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Next Smallest Step
 
-- Compose two real GEMVs (e.g. QKV projection shape) into one launch
-  (boundary deletion at kernel-family level), or open M2 (naive GEMM →
-  tiling ladder). Either way: claim in the ledger first.
-- Model decision recorded: ADR-0003 — M5 targets a small dense decoder-only
-  model (provisional Qwen3-1.7B); Swift-class hybrid deferred to M6+.
+- **C1 / EXP6** (claimed): composed GEMV launch — implement per
+  experiments/LEDGER.md EXP6 claim; then C2/EXP7 decision (LUT vs W4A8).
+- Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding
 
