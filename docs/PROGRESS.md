@@ -69,6 +69,11 @@ Each entry: the concept, where I hit it in the code, the interview-ready sound b
   default; sm_120-specific kernel bugs invisible to smoke tests.
 - Evaluated and rejected: martinuke0 blog post (survey-level, unverifiable
   case studies, buggy snippets) — useful only for its memory-hierarchy table.
+- `research-swift-qwen38.md` (local) — UkisAI Swift-Qwen3.8-27B assessment:
+  reasoning-efficiency fine-tune (~2× fewer thinking tokens, hard-math
+  regression on AIME/HMMT), Q4_K GGUF with per-tier KLD + tail-percentile
+  validation, hybrid 48/64 recurrent/attention blocks, MTP head at Q8_0.
+  Candidate M5 target model; long-context tail-percentile methodology lesson.
 
 ## Narrative for the interview ("walk me through a project")
 
