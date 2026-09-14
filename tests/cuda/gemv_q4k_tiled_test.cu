@@ -15,6 +15,7 @@
 #include "gemv_q4k.cuh"
 #include "gemv_q4k_composed.cuh"
 #include "gemv_q4k_tiled.cuh"
+#include "gemv_q4k_warp_contig.cuh"
 #include "trail/cuda_check.hpp"
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -212,6 +213,55 @@ std::vector<float> run_tiled_v2_q4k(const std::vector<BlockQ4K>& w_blocks,
     check_cuda(cudaFree(d_x), "free x");
     check_cuda(cudaFree(d_y), "free y");
     return y;
+}
+
+// Run warp-contiguous (v3) Q4_K and gate every row against the sequential
+// reference with the cancellation-aware bound (EXP7: accumulation order
+// differs from v2 by the warp->block permutation, so bitwise vs v2 is
+// impossible by construction; the bound gate is the contract).
+double check_warp_contig_q4k(const std::vector<BlockQ4K>& w_blocks,
+                             const std::vector<float>& x, int rows, int cols,
+                             unsigned seed) {
+    std::vector<float> expected(rows);
+    trail::reference::gemv_q4_k(w_blocks.data(), x.data(), rows, cols, expected.data());
+
+    BlockQ4K* d_w = nullptr;
+    float *d_x = nullptr, *d_y = nullptr;
+    check_cuda(cudaMalloc(&d_w, w_blocks.size() * 144), "malloc w");
+    check_cuda(cudaMalloc(&d_x, x.size() * sizeof(float)), "malloc x");
+    check_cuda(cudaMalloc(&d_y, rows * sizeof(float)), "malloc y");
+    check_cuda(cudaMemcpy(d_w, w_blocks.data(), w_blocks.size() * 144,
+                          cudaMemcpyHostToDevice), "H2D w");
+    check_cuda(cudaMemcpy(d_x, x.data(), x.size() * sizeof(float),
+                          cudaMemcpyHostToDevice), "H2D x");
+
+    trail::gemv_q4_k_warp_contig(d_w, d_x, d_y, rows, cols);
+    check_cuda(cudaDeviceSynchronize(), "warp-contig q4k run");
+    std::vector<float> actual(rows);
+    check_cuda(cudaMemcpy(actual.data(), d_y, rows * sizeof(float),
+                          cudaMemcpyDeviceToHost), "D2H y");
+    check_cuda(cudaFree(d_w), "free w");
+    check_cuda(cudaFree(d_x), "free x");
+    check_cuda(cudaFree(d_y), "free y");
+
+    const int blocks_per_row = cols / QK4_K;
+    std::vector<float> dq(cols);
+    double worst = 0.0;
+    for (int m = 0; m < rows; ++m) {
+        trail::reference::dequantize_q4_k(w_blocks.data() + static_cast<std::size_t>(m) *
+                                                          blocks_per_row,
+                                          blocks_per_row, dq.data());
+        const double bound = trail::reference::dot_error_bound(dq.data(), x.data(), cols);
+        const double diff = std::abs(static_cast<double>(actual[m]) -
+                                     static_cast<double>(expected[m]));
+        if (diff > bound) {
+            FAIL("warp-contig Q4_K exceeds error bound at y[" << m
+                 << "]: device=" << actual[m] << " reference=" << expected[m]
+                 << " |diff|=" << diff << " bound=" << bound << " (seed=" << seed << ")");
+        }
+        if (bound > 0.0 && diff / bound > worst) { worst = diff / bound; }
+    }
+    return worst;
 }
 
 // Run the composed kernel on (W1, W2, x); returns {y1, y2}.
@@ -446,6 +496,65 @@ TEST_CASE("fast half decode matches full decoder on its supported domain",
         }
     }
     CHECK(mismatches == 0);
+}
+
+TEST_CASE("warp-contiguous Q4_K GEMV within error bound over random inputs",
+          "[cuda][gemv][warpcontig]") {
+    // EXP7 v3: contiguous warp->block spans. For cols <= 1024 (<= 4 blocks
+    // per row) the v3 assignment degenerates to v2's; cols = 4096 (16
+    // blocks/row) exercises the real permutation.
+    const int cols = GENERATE(256, 512, 1024, 4096);
+    const int rows = GENERATE(1, 3, 7, 64);
+    double worst_overall = 0.0;
+    for (unsigned seed = 42; seed < 46; ++seed) {
+        std::mt19937 rng(seed);
+        std::vector<BlockQ4K> blocks(static_cast<std::size_t>(rows) * (cols / QK4_K));
+        fill_random_blocks(blocks, rng);
+        std::vector<float> x(cols);
+        fill_random_vector(x, rng);
+        const double worst = check_warp_contig_q4k(blocks, x, rows, cols, seed);
+        if (worst > worst_overall) { worst_overall = worst; }
+    }
+    INFO("worst |diff|/bound ratio: " << worst_overall);
+    CHECK(worst_overall <= 1.0);
+}
+
+TEST_CASE("warp-contiguous Q4_K GEMV edge blocks are exact",
+          "[cuda][gemv][warpcontig]") {
+    constexpr int rows = 4;
+    constexpr int cols = 4096;  // 16 blocks/row: real v3 mapping, not the degenerate one
+    std::vector<BlockQ4K> blocks(static_cast<std::size_t>(rows) * (cols / QK4_K));
+    for (auto& blk : blocks) {
+        blk.d = 0;
+        blk.dmin = 0;
+    }
+    for (auto& q : blocks[5].qs) { q = 0xFF; }   // block inside warp 1's contiguous span
+    for (auto& s : blocks[5].scales) { s = 0x3F; }
+
+    std::mt19937 rng(9);
+    std::vector<float> x(cols);
+    fill_random_vector(x, rng);
+
+    BlockQ4K* d_w = nullptr;
+    float *d_x = nullptr, *d_y = nullptr;
+    check_cuda(cudaMalloc(&d_w, blocks.size() * 144), "malloc w");
+    check_cuda(cudaMalloc(&d_x, x.size() * sizeof(float)), "malloc x");
+    check_cuda(cudaMalloc(&d_y, rows * sizeof(float)), "malloc y");
+    check_cuda(cudaMemcpy(d_w, blocks.data(), blocks.size() * 144, cudaMemcpyHostToDevice),
+               "H2D w");
+    check_cuda(cudaMemcpy(d_x, x.data(), x.size() * sizeof(float),
+                          cudaMemcpyHostToDevice), "H2D x");
+    trail::gemv_q4_k_warp_contig(d_w, d_x, d_y, rows, cols);
+    check_cuda(cudaDeviceSynchronize(), "run");
+    std::vector<float> y(rows);
+    check_cuda(cudaMemcpy(y.data(), d_y, rows * sizeof(float), cudaMemcpyDeviceToHost),
+               "D2H y");
+    check_cuda(cudaFree(d_w), "free w");
+    check_cuda(cudaFree(d_x), "free x");
+    check_cuda(cudaFree(d_y), "free y");
+    for (int i = 0; i < rows; ++i) {
+        CHECK(y[i] == 0.0F);
+    }
 }
 
 TEST_CASE("composed GEMV matches tiled-v2 bitwise over random inputs",
