@@ -246,6 +246,46 @@ weight). Re-predict before coding.
 
 Full record: `experiments/E0004_gemv_q4k_tiled.md`.
 
+## EXP5 — Q4_K GEMV instruction-cost reduction (attack the issue wall EXP4 exposed)
+
+**Accounting claim (stated before coding):**
+- Diagnosis from EXP4 SASS: the tiled Q4_K kernel issues ~4–5 instructions
+  per weight — inlined branchy half→float conversion (subnormal/inf paths)
+  per scale decode, scalar byte loads for scales, per-byte nibble extraction
+  — saturating ~93% of estimated issue capacity. Bytes are no longer the
+  binding constraint (608 µs at 7× fewer W bytes than the f32 twin).
+- Mechanisms (combined candidate):
+  1. **x loads vectorized to float4** → 8 LDG.128 instead of 32 LDG.32 per
+     thread; also 2 rows per block halves x-load instructions per row.
+  2. **Cheap half decode**: scales restricted to finite-normal halves (same
+     contract as the test generators); normal-only conversion is 3 int ops
+     + IMAD-free, no branches. (Documented deviation: inf/NaN d/dmin
+     unsupported — they never occur in real quantized scales; format decode
+     in the reference stays complete and bitwise-gated.)
+  3. **Nibble extraction on 32-bit words** with LOP3/SHF on 8 weights per
+     uint32, no per-byte loads.
+  4. Process sub-blocks of ONE 32-byte chunk per thread pair (lows/highs
+     split across the pair) so chunk loads are not duplicated.
+- Prediction (OC 1810 GB/s, M=2^16, K=4096): if issue pressure drops below
+  the memory wall, Q4_K tiled ≈ 151.2 MB / (0.6–0.9 × 1810 GB/s) =
+  **93–139 µs**; if still issue-bound, expect 250–400 µs (partial win).
+- Falsifiers: (1) >400 µs → instruction cost not the dominant term, re-profile
+  with ncu before more restructuring; (2) achieved BW > 1810 → L2 residency
+  or DCE (SASS check); (3) correctness — dequant summands remain
+  bitwise-gated via the E0003 suite; dot stays within the cancellation-aware
+  bound.
+- Correctness: same gate suite as EXP4 (error-bound dot + exact-zero edges +
+  determinism), plus a known-value unit test for the normal-only half decode
+  (and an assertion that the generators never feed it non-normal scales).
+
+| Field | E0004 q4k tiled | E0005 q4k tiled v2 |
+|---|---|---|
+| Median | 608.2 µs (249 GB/s) | (pending) |
+| Status | LOCALLY VERIFIED | CLAIMED (code not yet written) |
+
+Full record: `experiments/E0005_gemv_q4k_fast_decode.md` (to be created with
+implementation).
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
