@@ -1,0 +1,5 @@
+O-proj    W=   16.8 MB | warm     10.9 us (  1544 GB/s) | L2-flushed     17.3 us (   972 GB/s) | cold/warm 1.59x
+QKV       W=   33.6 MB | warm     13.5 us (  2487 GB/s) | L2-flushed     29.5 us (  1137 GB/s) | cold/warm 2.19x
+MLP down  W=   50.3 MB | warm     17.2 us (  2936 GB/s) | L2-flushed     39.8 us (  1266 GB/s) | cold/warm 2.32x
+MLP gate  W=  100.7 MB | warm     24.5 us (  4104 GB/s) | L2-flushed     74.6 us (  1350 GB/s) | cold/warm 3.04x
+LM head   W= 1244.7 MB | warm    744.2 us (  1673 GB/s) | L2-flushed    789.8 us (  1577 GB/s) | cold/warm 1.06x

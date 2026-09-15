@@ -1,0 +1,205 @@
+== QKV fused    N=4096 K=2048 | W=33.6 MB ==
+  M=  1 | ideal     18.6 us
+    rung0            56       56       56 us |     604 GB/s ( 33.4% BW) |   0.30 TFLOPS (  0.3% FFMA) | meas/ideal   2.99
+    rung1             9        9        9 us |    3783 GB/s (209.0% BW) |   1.89 TFLOPS (  1.7% FFMA) | meas/ideal   0.48
+    speedup 6.26x | rung1 TFLOPS gain 6.26x
+  M=  2 | ideal     18.6 us
+    rung0            66       66       68 us |     507 GB/s ( 28.0% BW) |   0.51 TFLOPS (  0.5% FFMA) | meas/ideal   3.57
+    rung1            10       11       12 us |    3178 GB/s (175.6% BW) |   3.17 TFLOPS (  2.8% FFMA) | meas/ideal   0.57
+    speedup 6.27x | rung1 TFLOPS gain 6.27x
+  M=  4 | ideal     18.6 us
+    rung0           105      105      105 us |     321 GB/s ( 17.7% BW) |   0.64 TFLOPS (  0.6% FFMA) | meas/ideal   5.64
+    rung1            12       12       14 us |    2724 GB/s (150.5% BW) |   5.43 TFLOPS (  4.9% FFMA) | meas/ideal   0.66
+    speedup 8.49x | rung1 TFLOPS gain 8.49x
+  M=  8 | ideal     18.6 us
+    rung0           193      193      193 us |     175 GB/s (  9.7% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  10.35
+    rung1            21       21       21 us |    1605 GB/s ( 88.7% BW) |   6.38 TFLOPS (  5.7% FFMA) | meas/ideal   1.13
+    speedup 9.18x | rung1 TFLOPS gain 9.18x
+  M= 16 | ideal     18.8 us
+    rung0           383      384      385 us |      88 GB/s (  4.9% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  20.47
+    rung1            37       37       37 us |     915 GB/s ( 50.5% BW) |   7.23 TFLOPS (  6.5% FFMA) | meas/ideal   1.98
+    speedup 10.34x | rung1 TFLOPS gain 10.34x
+  M= 32 | ideal     19.0 us
+    rung0           763      764      765 us |      45 GB/s (  2.5% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  40.25
+    rung1            68       68       69 us |     502 GB/s ( 27.8% BW) |   7.86 TFLOPS (  7.1% FFMA) | meas/ideal   3.60
+    speedup 11.17x | rung1 TFLOPS gain 11.17x
+  M= 64 | ideal     19.4 us
+    rung0          1334     1334     1335 us |      26 GB/s (  1.5% BW) |   0.80 TFLOPS (  0.7% FFMA) | meas/ideal  68.75
+    rung1           135      135      136 us |     260 GB/s ( 14.3% BW) |   7.94 TFLOPS (  7.1% FFMA) | meas/ideal   6.97
+    speedup 9.86x | rung1 TFLOPS gain 9.86x
+  M=128 | ideal     20.3 us
+    rung0          2477     2479     2483 us |      15 GB/s (  0.8% BW) |   0.87 TFLOPS (  0.8% FFMA) | meas/ideal 122.25
+    rung1           267      278      307 us |     132 GB/s (  7.3% BW) |   7.72 TFLOPS (  6.9% FFMA) | meas/ideal  13.71
+    speedup 8.92x | rung1 TFLOPS gain 8.92x
+  M=256 | ideal     38.6 us
+    rung0          4757     4759     4761 us |       8 GB/s (  0.5% BW) |   0.90 TFLOPS (  0.8% FFMA) | meas/ideal 123.43
+    rung1           550      666      709 us |      60 GB/s (  3.3% BW) |   6.45 TFLOPS (  5.8% FFMA) | meas/ideal  17.28
+    speedup 7.14x | rung1 TFLOPS gain 7.14x
+  M=512 | ideal     77.1 us
+    rung0          9320     9322     9333 us |       5 GB/s (  0.3% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal 120.89
+    rung1          1497     1590     1712 us |      29 GB/s (  1.6% BW) |   5.40 TFLOPS (  4.9% FFMA) | meas/ideal  20.62
+    speedup 5.86x | rung1 TFLOPS gain 5.86x
+== O-proj       N=2048 K=2048 | W=16.8 MB ==
+  M=  1 | ideal      9.3 us
+    rung0            56       56       56 us |     302 GB/s ( 16.7% BW) |   0.15 TFLOPS (  0.1% FFMA) | meas/ideal   5.99
+    rung1             7        7       10 us |    2387 GB/s (131.9% BW) |   1.19 TFLOPS (  1.1% FFMA) | meas/ideal   0.76
+    speedup 7.90x | rung1 TFLOPS gain 7.90x
+  M=  2 | ideal      9.3 us
+    rung0            66       67       67 us |     252 GB/s ( 13.9% BW) |   0.25 TFLOPS (  0.2% FFMA) | meas/ideal   7.18
+    rung1             7        7        9 us |    2446 GB/s (135.1% BW) |   2.44 TFLOPS (  2.2% FFMA) | meas/ideal   0.74
+    speedup 9.70x | rung1 TFLOPS gain 9.70x
+  M=  4 | ideal      9.3 us
+    rung0           105      105      105 us |     161 GB/s (  8.9% BW) |   0.32 TFLOPS (  0.3% FFMA) | meas/ideal  11.25
+    rung1             9        9       10 us |    1943 GB/s (107.3% BW) |   3.87 TFLOPS (  3.5% FFMA) | meas/ideal   0.93
+    speedup 12.08x | rung1 TFLOPS gain 12.08x
+  M=  8 | ideal      9.3 us
+    rung0           193      193      193 us |      88 GB/s (  4.8% BW) |   0.35 TFLOPS (  0.3% FFMA) | meas/ideal  20.67
+    rung1            14       15       15 us |    1157 GB/s ( 63.9% BW) |   4.59 TFLOPS (  4.1% FFMA) | meas/ideal   1.56
+    speedup 13.22x | rung1 TFLOPS gain 13.22x
+  M= 16 | ideal      9.4 us
+    rung0           193      193      193 us |      88 GB/s (  4.9% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  20.51
+    rung1            25       25       25 us |     686 GB/s ( 37.9% BW) |   5.41 TFLOPS (  4.9% FFMA) | meas/ideal   2.64
+    speedup 7.77x | rung1 TFLOPS gain 7.77x
+  M= 32 | ideal      9.6 us
+    rung0           384      384      384 us |      45 GB/s (  2.5% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  40.15
+    rung1            44       44       45 us |     392 GB/s ( 21.6% BW) |   6.08 TFLOPS (  5.5% FFMA) | meas/ideal   4.62
+    speedup 8.69x | rung1 TFLOPS gain 8.69x
+  M= 64 | ideal      9.8 us
+    rung0           763      763      764 us |      23 GB/s (  1.3% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  77.51
+    rung1            86       87       87 us |     206 GB/s ( 11.4% BW) |   6.20 TFLOPS (  5.6% FFMA) | meas/ideal   8.79
+    speedup 8.82x | rung1 TFLOPS gain 8.82x
+  M=128 | ideal     10.4 us
+    rung0          1336     1338     1338 us |      14 GB/s (  0.8% BW) |   0.80 TFLOPS (  0.7% FFMA) | meas/ideal 128.28
+    rung1           168      172      173 us |     110 GB/s (  6.1% BW) |   6.26 TFLOPS (  5.6% FFMA) | meas/ideal  16.45
+    speedup 7.80x | rung1 TFLOPS gain 7.80x
+  M=256 | ideal     19.3 us
+    rung0          2477     2477     2479 us |       8 GB/s (  0.5% BW) |   0.87 TFLOPS (  0.8% FFMA) | meas/ideal 128.51
+    rung1           331      339      342 us |      62 GB/s (  3.4% BW) |   6.34 TFLOPS (  5.7% FFMA) | meas/ideal  17.58
+    speedup 7.31x | rung1 TFLOPS gain 7.31x
+  M=512 | ideal     38.6 us
+    rung0          4758     4760     4762 us |       5 GB/s (  0.3% BW) |   0.90 TFLOPS (  0.8% FFMA) | meas/ideal 123.46
+    rung1           663      672      687 us |      37 GB/s (  2.1% BW) |   6.39 TFLOPS (  5.7% FFMA) | meas/ideal  17.42
+    speedup 7.09x | rung1 TFLOPS gain 7.09x
+== MLP gate+up  N=12288 K=2048 | W=100.7 MB ==
+  M=  1 | ideal     55.6 us
+    rung0           101      102      102 us |     992 GB/s ( 54.8% BW) |   0.50 TFLOPS (  0.4% FFMA) | meas/ideal   1.82
+    rung1            23       23       23 us |    4362 GB/s (241.0% BW) |   2.18 TFLOPS (  2.0% FFMA) | meas/ideal   0.41
+    speedup 4.40x | rung1 TFLOPS gain 4.40x
+  M=  2 | ideal     55.7 us
+    rung0           153      154      154 us |     656 GB/s ( 36.2% BW) |   0.65 TFLOPS (  0.6% FFMA) | meas/ideal   2.76
+    rung1            23       23       24 us |    4289 GB/s (237.0% BW) |   4.28 TFLOPS (  3.8% FFMA) | meas/ideal   0.42
+    speedup 6.54x | rung1 TFLOPS gain 6.54x
+  M=  4 | ideal     55.7 us
+    rung0           302      302      303 us |     334 GB/s ( 18.4% BW) |   0.67 TFLOPS (  0.6% FFMA) | meas/ideal   5.42
+    rung1            29       29       29 us |    3480 GB/s (192.3% BW) |   6.94 TFLOPS (  6.2% FFMA) | meas/ideal   0.52
+    speedup 10.42x | rung1 TFLOPS gain 10.42x
+  M=  8 | ideal     55.9 us
+    rung0           579      580      580 us |     174 GB/s (  9.6% BW) |   0.69 TFLOPS (  0.6% FFMA) | meas/ideal  10.38
+    rung1            54       55       55 us |    1844 GB/s (101.9% BW) |   7.34 TFLOPS (  6.6% FFMA) | meas/ideal   0.98
+    speedup 10.58x | rung1 TFLOPS gain 10.58x
+  M= 16 | ideal     56.1 us
+    rung0           960      961      990 us |     106 GB/s (  5.8% BW) |   0.84 TFLOPS (  0.8% FFMA) | meas/ideal  17.12
+    rung1           102      103      103 us |     988 GB/s ( 54.6% BW) |   7.83 TFLOPS (  7.0% FFMA) | meas/ideal   1.83
+    speedup 9.34x | rung1 TFLOPS gain 9.34x
+  M= 32 | ideal     56.6 us
+    rung0          1907     1907     1909 us |      54 GB/s (  3.0% BW) |   0.84 TFLOPS (  0.8% FFMA) | meas/ideal  33.68
+    rung1           251      253      257 us |     405 GB/s ( 22.4% BW) |   6.36 TFLOPS (  5.7% FFMA) | meas/ideal   4.47
+    speedup 7.53x | rung1 TFLOPS gain 7.53x
+  M= 64 | ideal     57.6 us
+    rung0          3621     3622     3645 us |      29 GB/s (  1.6% BW) |   0.89 TFLOPS (  0.8% FFMA) | meas/ideal  62.83
+    rung1           680      690      699 us |     151 GB/s (  8.4% BW) |   4.67 TFLOPS (  4.2% FFMA) | meas/ideal  11.97
+    speedup 5.25x | rung1 TFLOPS gain 5.25x
+  M=128 | ideal     59.7 us
+    rung0          7048     7053     7058 us |      15 GB/s (  0.8% BW) |   0.91 TFLOPS (  0.8% FFMA) | meas/ideal 118.19
+    rung1          1514     1573     1594 us |      69 GB/s (  3.8% BW) |   4.10 TFLOPS (  3.7% FFMA) | meas/ideal  26.37
+    speedup 4.48x | rung1 TFLOPS gain 4.48x
+  M=256 | ideal    115.7 us
+    rung0         13909    13912    13922 us |       8 GB/s (  0.5% BW) |   0.93 TFLOPS (  0.8% FFMA) | meas/ideal 120.28
+    rung1          3315     3372     3438 us |      34 GB/s (  1.9% BW) |   3.82 TFLOPS (  3.4% FFMA) | meas/ideal  29.16
+    speedup 4.13x | rung1 TFLOPS gain 4.13x
+  M=512 | ideal    231.3 us
+    rung0         27624    27626    27631 us |       5 GB/s (  0.3% BW) |   0.93 TFLOPS (  0.8% FFMA) | meas/ideal 119.42
+    rung1          6029     6380     6543 us |      20 GB/s (  1.1% BW) |   4.04 TFLOPS (  3.6% FFMA) | meas/ideal  27.58
+    speedup 4.33x | rung1 TFLOPS gain 4.33x
+== MLP down     N=2048 K=6144 | W=50.3 MB ==
+  M=  1 | ideal     27.8 us
+    rung0           162      162      162 us |     311 GB/s ( 17.2% BW) |   0.16 TFLOPS (  0.1% FFMA) | meas/ideal   5.82
+    rung1            13       13       13 us |    3891 GB/s (215.0% BW) |   1.94 TFLOPS (  1.7% FFMA) | meas/ideal   0.47
+    speedup 12.51x | rung1 TFLOPS gain 12.51x
+  M=  2 | ideal     27.8 us
+    rung0           197      197      197 us |     256 GB/s ( 14.1% BW) |   0.26 TFLOPS (  0.2% FFMA) | meas/ideal   7.08
+    rung1            15       15       17 us |    3357 GB/s (185.5% BW) |   3.35 TFLOPS (  3.0% FFMA) | meas/ideal   0.54
+    speedup 13.13x | rung1 TFLOPS gain 13.13x
+  M=  4 | ideal     27.9 us
+    rung0           318      319      319 us |     158 GB/s (  8.7% BW) |   0.32 TFLOPS (  0.3% FFMA) | meas/ideal  11.43
+    rung1            21       21       21 us |    2421 GB/s (133.8% BW) |   4.83 TFLOPS (  4.3% FFMA) | meas/ideal   0.75
+    speedup 15.29x | rung1 TFLOPS gain 15.29x
+  M=  8 | ideal     28.0 us
+    rung0           578      578      579 us |      87 GB/s (  4.8% BW) |   0.35 TFLOPS (  0.3% FFMA) | meas/ideal  20.69
+    rung1            39       40       40 us |    1275 GB/s ( 70.5% BW) |   5.07 TFLOPS (  4.6% FFMA) | meas/ideal   1.42
+    speedup 14.58x | rung1 TFLOPS gain 14.58x
+  M= 16 | ideal     28.1 us
+    rung0           578      579      580 us |      88 GB/s (  4.9% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  20.61
+    rung1            87       88       89 us |     578 GB/s ( 31.9% BW) |   4.58 TFLOPS (  4.1% FFMA) | meas/ideal   3.13
+    speedup 6.58x | rung1 TFLOPS gain 6.58x
+  M= 32 | ideal     28.4 us
+    rung0          1154     1155     1156 us |      44 GB/s (  2.5% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  40.69
+    rung1           219      225      229 us |     229 GB/s ( 12.6% BW) |   3.58 TFLOPS (  3.2% FFMA) | meas/ideal   7.92
+    speedup 5.14x | rung1 TFLOPS gain 5.14x
+  M= 64 | ideal     29.0 us
+    rung0          2303     2304     2305 us |      23 GB/s (  1.3% BW) |   0.70 TFLOPS (  0.6% FFMA) | meas/ideal  79.54
+    rung1           559      573      585 us |      91 GB/s (  5.1% BW) |   2.81 TFLOPS (  2.5% FFMA) | meas/ideal  19.79
+    speedup 4.02x | rung1 TFLOPS gain 4.02x
+  M=128 | ideal     30.1 us
+    rung0          4026     4032     4036 us |      14 GB/s (  0.7% BW) |   0.80 TFLOPS (  0.7% FFMA) | meas/ideal 133.84
+    rung1           996     1121     1227 us |      49 GB/s (  2.7% BW) |   2.87 TFLOPS (  2.6% FFMA) | meas/ideal  37.20
+    speedup 3.60x | rung1 TFLOPS gain 3.60x
+  M=256 | ideal     57.8 us
+    rung0          7477     7481     7486 us |       8 GB/s (  0.4% BW) |   0.86 TFLOPS (  0.8% FFMA) | meas/ideal 129.35
+    rung1          2092     2508     2600 us |      23 GB/s (  1.3% BW) |   2.57 TFLOPS (  2.3% FFMA) | meas/ideal  43.37
+    speedup 2.98x | rung1 TFLOPS gain 2.98x
+  M=512 | ideal    115.7 us
+    rung0         14377    14381    14388 us |       5 GB/s (  0.3% BW) |   0.90 TFLOPS (  0.8% FFMA) | meas/ideal 124.34
+    rung1          4946     5278     5406 us |      13 GB/s (  0.7% BW) |   2.44 TFLOPS (  2.2% FFMA) | meas/ideal  45.64
+    speedup 2.72x | rung1 TFLOPS gain 2.72x
+== LM head      N=151936 K=2048 | W=1244.7 MB ==
+  M=  1 | ideal    688.0 us
+    rung0          1763     1770     1776 us |     704 GB/s ( 38.9% BW) |   0.35 TFLOPS (  0.3% FFMA) | meas/ideal   2.57
+    rung1           739      739      740 us |    1685 GB/s ( 93.1% BW) |   0.84 TFLOPS (  0.8% FFMA) | meas/ideal   1.07
+    speedup 2.39x | rung1 TFLOPS gain 2.39x
+  M=  2 | ideal    688.3 us
+    rung0          2176     2186     2193 us |     570 GB/s ( 31.5% BW) |   0.57 TFLOPS (  0.5% FFMA) | meas/ideal   3.18
+    rung1           739      740      740 us |    1683 GB/s ( 93.0% BW) |   1.68 TFLOPS (  1.5% FFMA) | meas/ideal   1.08
+    speedup 2.95x | rung1 TFLOPS gain 2.95x
+  M=  4 | ideal    689.0 us
+    rung0          2674     2676     2692 us |     466 GB/s ( 25.8% BW) |   0.93 TFLOPS (  0.8% FFMA) | meas/ideal   3.88
+    rung1           739      740      741 us |    1685 GB/s ( 93.1% BW) |   3.36 TFLOPS (  3.0% FFMA) | meas/ideal   1.07
+    speedup 3.61x | rung1 TFLOPS gain 3.61x
+  M=  8 | ideal    690.4 us
+    rung0          5395     5396     5397 us |     232 GB/s ( 12.8% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal   7.82
+    rung1           761      766      770 us |    1632 GB/s ( 90.1% BW) |   6.50 TFLOPS (  5.8% FFMA) | meas/ideal   1.11
+    speedup 7.05x | rung1 TFLOPS gain 7.05x
+  M= 16 | ideal    693.1 us
+    rung0         10783    10784    10786 us |     116 GB/s (  6.4% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal  15.56
+    rung1          1179     1195     1202 us |    1050 GB/s ( 58.0% BW) |   8.34 TFLOPS (  7.5% FFMA) | meas/ideal   1.72
+    speedup 9.03x | rung1 TFLOPS gain 9.03x
+  M= 32 | ideal    698.5 us
+    rung0         21555    21557    21610 us |      59 GB/s (  3.2% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal  30.86
+    rung1          4881     4892     4908 us |     258 GB/s ( 14.3% BW) |   4.07 TFLOPS (  3.7% FFMA) | meas/ideal   7.00
+    speedup 4.41x | rung1 TFLOPS gain 4.41x
+  M= 64 | ideal    709.4 us
+    rung0         43271    43274    43325 us |      30 GB/s (  1.6% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal  61.00
+    rung1          9800     9838     9866 us |     131 GB/s (  7.2% BW) |   4.05 TFLOPS (  3.6% FFMA) | meas/ideal  13.87
+    speedup 4.40x | rung1 TFLOPS gain 4.40x
+  M=128 | ideal    731.2 us
+    rung0         86363    86371    86399 us |      15 GB/s (  0.8% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal 118.12
+    rung1         23333    23483    23526 us |      56 GB/s (  3.1% BW) |   3.39 TFLOPS (  3.0% FFMA) | meas/ideal  32.12
+    speedup 3.68x | rung1 TFLOPS gain 3.68x
+  M=256 | ideal   1430.1 us
+    rung0        172664   172684   173172 us |       8 GB/s (  0.4% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal 120.75
+    rung1         50086    50417    50525 us |      28 GB/s (  1.5% BW) |   3.16 TFLOPS (  2.8% FFMA) | meas/ideal  35.25
+    speedup 3.43x | rung1 TFLOPS gain 3.43x
+  M=512 | ideal   2860.3 us
+    rung0        345208   345236   345756 us |       5 GB/s (  0.2% BW) |   0.92 TFLOPS (  0.8% FFMA) | meas/ideal 120.70
+    rung1        103709   103911   104143 us |      15 GB/s (  0.8% BW) |   3.07 TFLOPS (  2.8% FFMA) | meas/ideal  36.33
+    speedup 3.32x | rung1 TFLOPS gain 3.32x

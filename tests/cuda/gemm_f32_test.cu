@@ -6,6 +6,8 @@
 
 #include "gemm_f32_ref.hpp"
 #include "gemm_f32.cuh"
+#include "gemm_f32_coalesced.cuh"
+#include "gemv_q4k_ref.hpp"  // reference::dot_error_bound (cancellation-aware bound)
 #include "trail/cuda_check.hpp"
 
 #include <catch2/catch_session.hpp>
@@ -40,6 +42,28 @@ std::vector<float> run_naive(const std::vector<float>& x,
                          cudaMemcpyHostToDevice), "H2D w");
     trail::gemm_f32_naive(d_x, d_w, d_y, m, n, k);
     check_cuda(cudaDeviceSynchronize(), "naive gemm run");
+    std::vector<float> y(static_cast<std::size_t>(m) * n);
+    check_cuda(cudaMemcpy(y.data(), d_y, y.size() * sizeof(float),
+                          cudaMemcpyDeviceToHost), "D2H y");
+    check_cuda(cudaFree(d_x), "free x");
+    check_cuda(cudaFree(d_w), "free w");
+    check_cuda(cudaFree(d_y), "free y");
+    return y;
+}
+
+std::vector<float> run_coalesced(const std::vector<float>& x,
+                                 const std::vector<float>& w, int m, int n, int k) {
+    float *d_x = nullptr, *d_w = nullptr, *d_y = nullptr;
+    check_cuda(cudaMalloc(&d_x, x.size() * sizeof(float)), "malloc x");
+    check_cuda(cudaMalloc(&d_w, w.size() * sizeof(float)), "malloc w");
+    check_cuda(cudaMalloc(&d_y, static_cast<std::size_t>(m) * n * sizeof(float)),
+               "malloc y");
+    check_cuda(cudaMemcpy(d_x, x.data(), x.size() * sizeof(float),
+                         cudaMemcpyHostToDevice), "H2D x");
+    check_cuda(cudaMemcpy(d_w, w.data(), w.size() * sizeof(float),
+                         cudaMemcpyHostToDevice), "H2D w");
+    trail::gemm_f32_coalesced(d_x, d_w, d_y, m, n, k);
+    check_cuda(cudaDeviceSynchronize(), "coalesced gemm run");
     std::vector<float> y(static_cast<std::size_t>(m) * n);
     check_cuda(cudaMemcpy(y.data(), d_y, y.size() * sizeof(float),
                           cudaMemcpyDeviceToHost), "D2H y");
@@ -118,6 +142,75 @@ TEST_CASE("naive f32 GEMM is deterministic across runs", "[cuda][gemm]") {
     fill_random_vector(w, rng);
     const auto y1 = run_naive(x, w, m, n, k);
     const auto y2 = run_naive(x, w, m, n, k);
+    for (std::size_t i = 0; i < y1.size(); ++i) {
+        CHECK(y1[i] == y2[i]);
+    }
+}
+
+TEST_CASE("coalesced k-parallel f32 GEMM within error bound", "[cuda][gemm]") {
+    // Rung 1 changes the accumulation order (k-parallel partials, float4
+    // grouped, shuffle tree), so the gate is the cancellation-aware bound
+    // vs the sequential reference (E0004 policy) — not bitwise.
+    const int m = GENERATE(1, 3, 8, 64);
+    const int n = GENERATE(1, 17, 64, 128);
+    const int k = GENERATE(1, 3, 256, 512);
+    double worst = 0.0;
+    for (unsigned seed = 42; seed < 46; ++seed) {
+        std::mt19937 rng(seed);
+        std::vector<float> x(static_cast<std::size_t>(m) * k);
+        std::vector<float> w(static_cast<std::size_t>(n) * k);
+        fill_random_vector(x, rng);
+        fill_random_vector(w, rng);
+        std::vector<float> expected(static_cast<std::size_t>(m) * n);
+        trail::reference::gemm_f32(x.data(), w.data(), m, n, k, expected.data());
+        const auto actual = run_coalesced(x, w, m, n, k);
+        for (int row = 0; row < m; ++row) {
+            for (int col = 0; col < n; ++col) {
+                const std::size_t i = static_cast<std::size_t>(row) * n + col;
+                const double bound = trail::reference::dot_error_bound(
+                    w.data() + static_cast<std::size_t>(col) * k,
+                    x.data() + static_cast<std::size_t>(row) * k, k);
+                const double diff = std::abs(static_cast<double>(actual[i]) -
+                                             static_cast<double>(expected[i]));
+                if (diff > bound) {
+                    FAIL("coalesced f32 GEMM exceeds error bound at [" << i
+                         << "]: device=" << actual[i] << " reference=" << expected[i]
+                         << " |diff|=" << diff << " bound=" << bound << " (M=" << m
+                         << " N=" << n << " K=" << k << " seed=" << seed << ")");
+                }
+                if (bound > 0.0 && diff / bound > worst) { worst = diff / bound; }
+            }
+        }
+    }
+    INFO("worst |diff|/bound ratio: " << worst);
+    CHECK(worst <= 1.0);
+}
+
+TEST_CASE("coalesced f32 GEMM zero operands are exact", "[cuda][gemm]") {
+    const int m = 4;
+    const int n = 33;   // non-power-of-two
+    const int k = 129;  // odd K exercises the scalar fallback path
+    std::mt19937 rng(17);
+    std::vector<float> x(static_cast<std::size_t>(m) * k);
+    fill_random_vector(x, rng);
+    std::vector<float> w(static_cast<std::size_t>(n) * k, 0.0F);
+    const auto y = run_coalesced(x, w, m, n, k);
+    for (std::size_t i = 0; i < y.size(); ++i) {
+        CHECK(y[i] == 0.0F);
+    }
+}
+
+TEST_CASE("coalesced f32 GEMM is deterministic across runs", "[cuda][gemm]") {
+    const int m = 8;
+    const int n = 32;
+    const int k = 512;
+    std::mt19937 rng(19);
+    std::vector<float> x(static_cast<std::size_t>(m) * k);
+    std::vector<float> w(static_cast<std::size_t>(n) * k);
+    fill_random_vector(x, rng);
+    fill_random_vector(w, rng);
+    const auto y1 = run_coalesced(x, w, m, n, k);
+    const auto y2 = run_coalesced(x, w, m, n, k);
     for (std::size_t i = 0; i < y1.size(); ++i) {
         CHECK(y1[i] == y2[i]);
     }
