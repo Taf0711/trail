@@ -8,6 +8,7 @@
 #include "gemm_f32.cuh"
 #include "gemm_f32_coalesced.cuh"
 #include "gemm_f32_tiled.cuh"
+#include "gemm_f32_reg8.cuh"
 #include "gemv_q4k_ref.hpp"  // reference::dot_error_bound (cancellation-aware bound)
 #include "trail/cuda_check.hpp"
 
@@ -87,6 +88,28 @@ std::vector<float> run_tiled(const std::vector<float>& x,
                          cudaMemcpyHostToDevice), "H2D w");
     trail::gemm_f32_tiled(d_x, d_w, d_y, m, n, k);
     check_cuda(cudaDeviceSynchronize(), "tiled gemm run");
+    std::vector<float> y(static_cast<std::size_t>(m) * n);
+    check_cuda(cudaMemcpy(y.data(), d_y, y.size() * sizeof(float),
+                          cudaMemcpyDeviceToHost), "D2H y");
+    check_cuda(cudaFree(d_x), "free x");
+    check_cuda(cudaFree(d_w), "free w");
+    check_cuda(cudaFree(d_y), "free y");
+    return y;
+}
+
+std::vector<float> run_reg8(const std::vector<float>& x,
+                            const std::vector<float>& w, int m, int n, int k) {
+    float *d_x = nullptr, *d_w = nullptr, *d_y = nullptr;
+    check_cuda(cudaMalloc(&d_x, x.size() * sizeof(float)), "malloc x");
+    check_cuda(cudaMalloc(&d_w, w.size() * sizeof(float)), "malloc w");
+    check_cuda(cudaMalloc(&d_y, static_cast<std::size_t>(m) * n * sizeof(float)),
+               "malloc y");
+    check_cuda(cudaMemcpy(d_x, x.data(), x.size() * sizeof(float),
+                         cudaMemcpyHostToDevice), "H2D x");
+    check_cuda(cudaMemcpy(d_w, w.data(), w.size() * sizeof(float),
+                         cudaMemcpyHostToDevice), "H2D w");
+    trail::gemm_f32_reg8(d_x, d_w, d_y, m, n, k);
+    check_cuda(cudaDeviceSynchronize(), "reg8 gemm run");
     std::vector<float> y(static_cast<std::size_t>(m) * n);
     check_cuda(cudaMemcpy(y.data(), d_y, y.size() * sizeof(float),
                           cudaMemcpyDeviceToHost), "D2H y");
@@ -305,6 +328,48 @@ TEST_CASE("double-tiled f32 GEMM is deterministic across runs", "[cuda][gemm]") 
     fill_random_vector(w, rng);
     const auto y1 = run_tiled(x, w, m, n, k);
     const auto y2 = run_tiled(x, w, m, n, k);
+    for (std::size_t i = 0; i < y1.size(); ++i) {
+        CHECK(y1[i] == y2[i]);
+    }
+}
+
+TEST_CASE("8x8-register-tile f32 GEMM within error bound", "[cuda][gemm]") {
+    // Rung 3 tile is BM=256, BN=128, BK=16: these shapes straddle all three
+    // boundaries (+/-1) as well as the trivial 1 cases.
+    const int m = GENERATE(1, 3, 8, 64, 255, 257);
+    const int n = GENERATE(1, 17, 64, 127, 129);
+    const int k = GENERATE(1, 3, 15, 17, 256);
+    for (unsigned seed = 42; seed < 45; ++seed) {
+        gate_bound(run_reg8, m, n, k, seed, "reg8 f32 GEMM");
+    }
+    SUCCEED();
+}
+
+TEST_CASE("8x8-register-tile f32 GEMM zero operands are exact", "[cuda][gemm]") {
+    const int m = 257;  // straddles BM
+    const int n = 129;  // straddles BN
+    const int k = 33;   // straddles BK (two full chunks + 1)
+    std::mt19937 rng(37);
+    std::vector<float> x(static_cast<std::size_t>(m) * k);
+    fill_random_vector(x, rng);
+    std::vector<float> w(static_cast<std::size_t>(n) * k, 0.0F);
+    const auto y = run_reg8(x, w, m, n, k);
+    for (std::size_t i = 0; i < y.size(); ++i) {
+        CHECK(y[i] == 0.0F);
+    }
+}
+
+TEST_CASE("8x8-register-tile f32 GEMM is deterministic across runs", "[cuda][gemm]") {
+    const int m = 129;
+    const int n = 129;
+    const int k = 256;
+    std::mt19937 rng(41);
+    std::vector<float> x(static_cast<std::size_t>(m) * k);
+    std::vector<float> w(static_cast<std::size_t>(n) * k);
+    fill_random_vector(x, rng);
+    fill_random_vector(w, rng);
+    const auto y1 = run_reg8(x, w, m, n, k);
+    const auto y2 = run_reg8(x, w, m, n, k);
     for (std::size_t i = 0; i < y1.size(); ++i) {
         CHECK(y1[i] == y2[i]);
     }

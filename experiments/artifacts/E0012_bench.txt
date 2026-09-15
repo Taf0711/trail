@@ -1,0 +1,41 @@
+rung2 = 4x4 tiles (BM=128,BN=64,BK=32, REG:72); rung3 = 8x8 tiles (BM=256,BN=128,BK=16, REG:128, LOCAL:0)
+== QKV fused    N=4096 K=2048 | W=33.6 MB ==
+  M=  1 | rung2 warm     150.2 flushed     161.6 | rung3 warm     469.1 flushed     492.3 us | rung3   0.03 TFLOPS (  0.0% FFMA) | gain(flushed)  0.33
+  M=  8 | rung2 warm     151.0 flushed     162.8 | rung3 warm     511.0 flushed     496.2 us | rung3   0.27 TFLOPS (  0.2% FFMA) | gain(flushed)  0.33
+  M= 32 | rung2 warm     156.1 flushed     168.9 | rung3 warm     481.8 flushed     508.3 us | rung3   1.06 TFLOPS (  0.9% FFMA) | gain(flushed)  0.33
+  M= 64 | rung2 warm     156.8 flushed     169.7 | rung3 warm     486.7 flushed     513.6 us | rung3   2.09 TFLOPS (  1.9% FFMA) | gain(flushed)  0.33
+  M=128 | rung2 warm     167.5 flushed     246.6 | rung3 warm     499.4 flushed     633.7 us | rung3   3.39 TFLOPS (  3.0% FFMA) | gain(flushed)  0.39
+  M=256 | rung2 warm     169.5 flushed     248.6 | rung3 warm     536.1 flushed     697.2 us | rung3   6.16 TFLOPS (  5.5% FFMA) | gain(flushed)  0.36
+  M=512 | rung2 warm     325.7 flushed     432.7 | rung3 warm     537.0 flushed     693.5 us | rung3  12.39 TFLOPS ( 11.1% FFMA) | gain(flushed)  0.62
+== O-proj       N=2048 K=2048 | W=16.8 MB ==
+  M=  1 | rung2 warm     150.4 flushed     161.5 | rung3 warm     470.5 flushed     493.5 us | rung3   0.02 TFLOPS (  0.0% FFMA) | gain(flushed)  0.33
+  M=  8 | rung2 warm     152.2 flushed     164.0 | rung3 warm     472.3 flushed     496.8 us | rung3   0.14 TFLOPS (  0.1% FFMA) | gain(flushed)  0.33
+  M= 32 | rung2 warm     156.3 flushed     168.9 | rung3 warm     480.9 flushed     506.2 us | rung3   0.53 TFLOPS (  0.5% FFMA) | gain(flushed)  0.33
+  M= 64 | rung2 warm     157.2 flushed     169.7 | rung3 warm     486.4 flushed     512.2 us | rung3   1.05 TFLOPS (  0.9% FFMA) | gain(flushed)  0.33
+  M=128 | rung2 warm     167.5 flushed     246.6 | rung3 warm     499.2 flushed     629.6 us | rung3   1.71 TFLOPS (  1.5% FFMA) | gain(flushed)  0.39
+  M=256 | rung2 warm     168.3 flushed     244.6 | rung3 warm     534.0 flushed     693.1 us | rung3   3.10 TFLOPS (  2.8% FFMA) | gain(flushed)  0.35
+  M=512 | rung2 warm     169.5 flushed     246.6 | rung3 warm     534.9 flushed     691.0 us | rung3   6.22 TFLOPS (  5.6% FFMA) | gain(flushed)  0.36
+== MLP gate+up  N=12288 K=2048 | W=100.7 MB ==
+  M=  1 | rung2 warm     346.4 flushed     364.3 | rung3 warm     574.3 flushed     579.6 us | rung3   0.09 TFLOPS (  0.1% FFMA) | gain(flushed)  0.63
+  M=  8 | rung2 warm     347.0 flushed     366.4 | rung3 warm     575.3 flushed     580.8 us | rung3   0.69 TFLOPS (  0.6% FFMA) | gain(flushed)  0.63
+  M= 32 | rung2 warm     355.4 flushed     374.9 | rung3 warm     585.4 flushed     593.3 us | rung3   2.71 TFLOPS (  2.4% FFMA) | gain(flushed)  0.63
+  M= 64 | rung2 warm     362.7 flushed     382.1 | rung3 warm     593.1 flushed     601.0 us | rung3   5.36 TFLOPS (  4.8% FFMA) | gain(flushed)  0.64
+  M=128 | rung2 warm     383.4 flushed     480.1 | rung3 warm     607.8 flushed     648.0 us | rung3   9.94 TFLOPS (  8.9% FFMA) | gain(flushed)  0.74
+  M=256 | rung2 warm     591.3 flushed     674.6 | rung3 warm     706.8 flushed     725.9 us | rung3  17.75 TFLOPS ( 15.9% FFMA) | gain(flushed)  0.93
+  M=512 | rung2 warm     953.9 flushed    1030.4 | rung3 warm    1212.9 flushed    1360.7 us | rung3  18.94 TFLOPS ( 17.0% FFMA) | gain(flushed)  0.76
+== MLP down     N=2048 K=6144 | W=50.3 MB ==
+  M=  1 | rung2 warm     445.3 flushed     477.6 | rung3 warm    1407.2 flushed    1473.1 us | rung3   0.02 TFLOPS (  0.0% FFMA) | gain(flushed)  0.32
+  M=  8 | rung2 warm     449.2 flushed     483.3 | rung3 warm    1413.8 flushed    1484.4 us | rung3   0.14 TFLOPS (  0.1% FFMA) | gain(flushed)  0.33
+  M= 32 | rung2 warm     461.2 flushed     497.6 | rung3 warm    1438.7 flushed    1513.4 us | rung3   0.53 TFLOPS (  0.5% FFMA) | gain(flushed)  0.33
+  M= 64 | rung2 warm     464.8 flushed     501.1 | rung3 warm    1446.3 flushed    1521.1 us | rung3   1.06 TFLOPS (  1.0% FFMA) | gain(flushed)  0.33
+  M=128 | rung2 warm     489.7 flushed     717.6 | rung3 warm    1466.8 flushed    1837.9 us | rung3   1.75 TFLOPS (  1.6% FFMA) | gain(flushed)  0.39
+  M=256 | rung2 warm     489.9 flushed     711.4 | rung3 warm    1532.5 flushed    1987.4 us | rung3   3.24 TFLOPS (  2.9% FFMA) | gain(flushed)  0.36
+  M=512 | rung2 warm     491.9 flushed     714.0 | rung3 warm    1532.2 flushed    1980.2 us | rung3   6.51 TFLOPS (  5.8% FFMA) | gain(flushed)  0.36
+== LM head      N=151936 K=2048 | W=1244.7 MB ==
+  M=  1 | rung2 warm    2759.5 flushed    2763.4 | rung3 warm    4138.6 flushed    4144.1 us | rung3   0.15 TFLOPS (  0.1% FFMA) | gain(flushed)  0.67
+  M=  8 | rung2 warm    2806.4 flushed    2804.9 | rung3 warm    4231.4 flushed    4230.3 us | rung3   1.18 TFLOPS (  1.1% FFMA) | gain(flushed)  0.66
+  M= 32 | rung2 warm    2869.7 flushed    2874.5 | rung3 warm    4274.6 flushed    4270.3 us | rung3   4.66 TFLOPS (  4.2% FFMA) | gain(flushed)  0.67
+  M= 64 | rung2 warm    2930.4 flushed    2931.6 | rung3 warm    4300.0 flushed    4299.4 us | rung3   9.26 TFLOPS (  8.3% FFMA) | gain(flushed)  0.68
+  M=128 | rung2 warm    3329.5 flushed    3348.3 | rung3 warm    4389.7 flushed    4418.9 us | rung3  18.03 TFLOPS ( 16.2% FFMA) | gain(flushed)  0.76
+  M=256 | rung2 warm    6632.0 flushed    6642.0 | rung3 warm    5202.2 flushed    5198.7 us | rung3  30.65 TFLOPS ( 27.5% FFMA) | gain(flushed)  1.28
+  M=512 | rung2 warm   13221.5 flushed   13236.0 | rung3 warm   10398.0 flushed   10385.2 us | rung3  30.68 TFLOPS ( 27.5% FFMA) | gain(flushed)  1.27

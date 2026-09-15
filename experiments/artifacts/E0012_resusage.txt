@@ -1,0 +1,24 @@
+
+Fatbin ptx code:
+================
+arch = sm_120
+code version = [9,3]
+host = windows
+compile_size = 64bit
+compressed
+ptxasOptions = 
+
+Fatbin elf code:
+================
+arch = sm_120
+code version = [1,8]
+host = windows
+compile_size = 64bit
+
+Resource usage:
+ Common:
+  GLOBAL:0
+ Function _ZN5trail21gemm_f32_tiled_kernelEPKfS1_Pfiii:
+  REG:72 STACK:0 SHARED:26368 LOCAL:0 CONSTANT[0]:932 TEXTURE:0 SURFACE:0 SAMPLER:0
+ Function _ZN5trail20gemm_f32_reg8_kernelEPKfS1_Pfiii:
+  REG:128 STACK:48 SHARED:27136 LOCAL:0 CONSTANT[0]:932 TEXTURE:0 SURFACE:0 SAMPLER:0
