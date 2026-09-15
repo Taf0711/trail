@@ -21,6 +21,7 @@ add_executable(trail_bench_gemv_contig bench/gemv_q4k_warp_contig_bench.cu)
 add_executable(trail_bench_gemv_soa bench/gemv_q4k_soa_bench.cu)
 add_executable(trail_bench_gemm_f32 bench/gemm_f32_bench.cu)
 add_executable(trail_bench_gemm_f32_coalesced bench/gemm_f32_coalesced_bench.cu)
+add_executable(trail_bench_gemm_f32_tiled bench/gemm_f32_tiled_bench.cu)
 
 if(MSVC)
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=/W4)
@@ -28,7 +29,7 @@ else()
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=-Wall,-Wextra)
 endif()
 
-foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add trail_bench_vector_add_f4 trail_l0_microbench trail_l0_mma trail_bench_fused trail_bench_gemv trail_bench_gemv_tiled trail_bench_gemv_composed trail_bench_gemv_contig trail_bench_gemv_soa trail_bench_gemm_f32 trail_bench_gemm_f32_coalesced)
+foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add trail_bench_vector_add_f4 trail_l0_microbench trail_l0_mma trail_bench_fused trail_bench_gemv trail_bench_gemv_tiled trail_bench_gemv_composed trail_bench_gemv_contig trail_bench_gemv_soa trail_bench_gemm_f32 trail_bench_gemm_f32_coalesced trail_bench_gemm_f32_tiled)
     target_include_directories(${target} PRIVATE include src references/cpp)
     set_target_properties(${target} PROPERTIES CUDA_ARCHITECTURES 120)
     target_compile_options(${target} PRIVATE

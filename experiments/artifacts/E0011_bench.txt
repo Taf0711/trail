@@ -1,0 +1,56 @@
+warm = repeated-launch (L2-inflated if W < ~96 MB); flushed = DRAM-honest (256 MB eviction between samples)
+== QKV fused    N=4096 K=2048 | W=33.6 MB ==
+  M=  1 | rung1 warm      9.3 flushed     12.5 | rung2 warm    150.1 flushed    161.6 us (  0.10 TFLOPS,   0.1% FFMA,   208 GB/s) | speedup(flushed)  0.08 | tf-gain  0.08
+  M=  2 | rung1 warm     11.1 flushed     14.1 | rung2 warm    150.6 flushed    162.0 us (  0.21 TFLOPS,   0.2% FFMA,   207 GB/s) | speedup(flushed)  0.09 | tf-gain  0.09
+  M=  4 | rung1 warm     12.8 flushed     14.9 | rung2 warm    150.6 flushed    162.0 us (  0.41 TFLOPS,   0.4% FFMA,   208 GB/s) | speedup(flushed)  0.09 | tf-gain  0.09
+  M=  8 | rung1 warm     21.4 flushed     24.3 | rung2 warm    152.1 flushed    164.0 us (  0.82 TFLOPS,   0.7% FFMA,   206 GB/s) | speedup(flushed)  0.15 | tf-gain  0.15
+  M= 16 | rung1 warm     37.4 flushed     41.1 | rung2 warm    155.1 flushed    167.3 us (  1.60 TFLOPS,   1.4% FFMA,   203 GB/s) | speedup(flushed)  0.25 | tf-gain  0.25
+  M= 32 | rung1 warm     68.9 flushed     72.7 | rung2 warm    156.3 flushed    169.3 us (  3.17 TFLOPS,   2.8% FFMA,   203 GB/s) | speedup(flushed)  0.43 | tf-gain  0.43
+  M= 64 | rung1 warm    135.1 flushed    140.3 | rung2 warm    156.7 flushed    169.7 us (  6.33 TFLOPS,   5.7% FFMA,   207 GB/s) | speedup(flushed)  0.83 | tf-gain  0.83
+  M=128 | rung1 warm    309.6 flushed    318.3 | rung2 warm    168.2 flushed    248.6 us (  8.64 TFLOPS,   7.8% FFMA,   148 GB/s) | speedup(flushed)  1.28 | tf-gain  1.28
+  M=256 | rung1 warm    695.5 flushed    785.2 | rung2 warm    169.5 flushed    248.7 us ( 17.27 TFLOPS,  15.5% FFMA,   160 GB/s) | speedup(flushed)  3.16 | tf-gain  3.16
+  M=512 | rung1 warm   1935.4 flushed   1790.8 | rung2 warm    325.4 flushed    433.0 us ( 19.84 TFLOPS,  17.8% FFMA,   107 GB/s) | speedup(flushed)  4.14 | tf-gain  4.14
+== O-proj       N=2048 K=2048 | W=16.8 MB ==
+  M=  1 | rung1 warm      7.5 flushed      8.4 | rung2 warm    150.6 flushed    161.6 us (  0.05 TFLOPS,   0.0% FFMA,   104 GB/s) | speedup(flushed)  0.05 | tf-gain  0.05
+  M=  2 | rung1 warm      7.5 flushed      8.4 | rung2 warm    150.6 flushed    161.5 us (  0.10 TFLOPS,   0.1% FFMA,   104 GB/s) | speedup(flushed)  0.05 | tf-gain  0.05
+  M=  4 | rung1 warm      9.4 flushed     10.8 | rung2 warm    151.0 flushed    162.0 us (  0.21 TFLOPS,   0.2% FFMA,   104 GB/s) | speedup(flushed)  0.07 | tf-gain  0.07
+  M=  8 | rung1 warm     15.6 flushed     17.0 | rung2 warm    152.4 flushed    165.7 us (  0.41 TFLOPS,   0.4% FFMA,   102 GB/s) | speedup(flushed)  0.10 | tf-gain  0.10
+  M= 16 | rung1 warm     25.3 flushed     30.1 | rung2 warm    155.1 flushed    168.9 us (  0.79 TFLOPS,   0.7% FFMA,   101 GB/s) | speedup(flushed)  0.18 | tf-gain  0.18
+  M= 32 | rung1 warm     44.7 flushed     51.0 | rung2 warm    156.3 flushed    169.3 us (  1.59 TFLOPS,   1.4% FFMA,   102 GB/s) | speedup(flushed)  0.30 | tf-gain  0.30
+  M= 64 | rung1 warm     87.1 flushed     91.1 | rung2 warm    156.7 flushed    169.3 us (  3.17 TFLOPS,   2.8% FFMA,   105 GB/s) | speedup(flushed)  0.54 | tf-gain  0.54
+  M=128 | rung1 warm    172.3 flushed    211.8 | rung2 warm    168.2 flushed    246.6 us (  4.35 TFLOPS,   3.9% FFMA,    77 GB/s) | speedup(flushed)  0.86 | tf-gain  0.86
+  M=256 | rung1 warm    335.4 flushed    408.4 | rung2 warm    168.5 flushed    244.6 us (  8.78 TFLOPS,   7.9% FFMA,    86 GB/s) | speedup(flushed)  1.67 | tf-gain  1.67
+  M=512 | rung1 warm    671.9 flushed    795.4 | rung2 warm    169.9 flushed    248.7 us ( 17.27 TFLOPS,  15.5% FFMA,   101 GB/s) | speedup(flushed)  3.20 | tf-gain  3.20
+== MLP gate+up  N=12288 K=2048 | W=100.7 MB ==
+  M=  1 | rung1 warm     23.6 flushed     68.3 | rung2 warm    346.8 flushed    365.0 us (  0.14 TFLOPS,   0.1% FFMA,   276 GB/s) | speedup(flushed)  0.19 | tf-gain  0.19
+  M=  2 | rung1 warm     25.0 flushed     66.9 | rung2 warm    346.9 flushed    365.1 us (  0.28 TFLOPS,   0.2% FFMA,   276 GB/s) | speedup(flushed)  0.18 | tf-gain  0.18
+  M=  4 | rung1 warm     29.4 flushed     68.2 | rung2 warm    346.8 flushed    364.7 us (  0.55 TFLOPS,   0.5% FFMA,   277 GB/s) | speedup(flushed)  0.19 | tf-gain  0.19
+  M=  8 | rung1 warm     55.7 flushed     67.3 | rung2 warm    363.0 flushed    420.0 us (  0.96 TFLOPS,   0.9% FFMA,   241 GB/s) | speedup(flushed)  0.16 | tf-gain  0.16
+  M= 16 | rung1 warm    103.0 flushed    111.2 | rung2 warm    412.9 flushed    423.1 us (  1.90 TFLOPS,   1.7% FFMA,   240 GB/s) | speedup(flushed)  0.26 | tf-gain  0.26
+  M= 32 | rung1 warm    258.8 flushed    264.3 | rung2 warm    417.0 flushed    425.3 us (  3.79 TFLOPS,   3.4% FFMA,   241 GB/s) | speedup(flushed)  0.62 | tf-gain  0.62
+  M= 64 | rung1 warm    758.2 flushed    711.6 | rung2 warm    361.1 flushed    381.7 us (  8.44 TFLOPS,   7.6% FFMA,   273 GB/s) | speedup(flushed)  1.86 | tf-gain  1.86
+  M=128 | rung1 warm   1589.6 flushed   1305.4 | rung2 warm    384.5 flushed    481.3 us ( 13.39 TFLOPS,  12.0% FFMA,   224 GB/s) | speedup(flushed)  2.71 | tf-gain  2.71
+  M=256 | rung1 warm   3381.2 flushed   3006.3 | rung2 warm    593.4 flushed    674.6 us ( 19.10 TFLOPS,  17.1% FFMA,   171 GB/s) | speedup(flushed)  4.46 | tf-gain  4.46
+  M=512 | rung1 warm   7021.0 flushed   6742.8 | rung2 warm    953.2 flushed   1026.9 us ( 25.09 TFLOPS,  22.5% FFMA,   127 GB/s) | speedup(flushed)  6.57 | tf-gain  6.57
+== MLP down     N=2048 K=6144 | W=50.3 MB ==
+  M=  1 | rung1 warm     13.4 flushed     19.4 | rung2 warm    445.1 flushed    477.6 us (  0.05 TFLOPS,   0.0% FFMA,   105 GB/s) | speedup(flushed)  0.04 | tf-gain  0.04
+  M=  2 | rung1 warm     15.3 flushed     20.7 | rung2 warm    445.5 flushed    478.0 us (  0.11 TFLOPS,   0.1% FFMA,   105 GB/s) | speedup(flushed)  0.04 | tf-gain  0.04
+  M=  4 | rung1 warm     21.2 flushed     26.4 | rung2 warm    446.5 flushed    479.4 us (  0.21 TFLOPS,   0.2% FFMA,   105 GB/s) | speedup(flushed)  0.06 | tf-gain  0.06
+  M=  8 | rung1 warm     40.2 flushed     44.4 | rung2 warm    449.1 flushed    483.5 us (  0.42 TFLOPS,   0.4% FFMA,   105 GB/s) | speedup(flushed)  0.09 | tf-gain  0.09
+  M= 16 | rung1 warm     86.4 flushed     89.9 | rung2 warm    459.4 flushed    496.2 us (  0.81 TFLOPS,   0.7% FFMA,   102 GB/s) | speedup(flushed)  0.18 | tf-gain  0.18
+  M= 32 | rung1 warm    218.6 flushed    223.8 | rung2 warm    460.2 flushed    538.4 us (  1.50 TFLOPS,   1.3% FFMA,    95 GB/s) | speedup(flushed)  0.42 | tf-gain  0.42
+  M= 64 | rung1 warm    557.5 flushed    533.7 | rung2 warm    465.1 flushed    502.3 us (  3.21 TFLOPS,   2.9% FFMA,   104 GB/s) | speedup(flushed)  1.06 | tf-gain  1.06
+  M=128 | rung1 warm   1261.6 flushed    879.4 | rung2 warm    489.7 flushed    717.6 us (  4.49 TFLOPS,   4.0% FFMA,    76 GB/s) | speedup(flushed)  1.23 | tf-gain  1.23
+  M=256 | rung1 warm   2501.7 flushed   1225.6 | rung2 warm    489.7 flushed    711.5 us (  9.05 TFLOPS,   8.1% FFMA,    83 GB/s) | speedup(flushed)  1.72 | tf-gain  1.72
+  M=512 | rung1 warm   5391.2 flushed   4572.5 | rung2 warm    490.7 flushed    718.8 us ( 17.92 TFLOPS,  16.1% FFMA,    93 GB/s) | speedup(flushed)  6.36 | tf-gain  6.36
+== LM head      N=151936 K=2048 | W=1244.7 MB ==
+  M=  1 | rung1 warm    798.1 flushed    808.3 | rung2 warm   2976.1 flushed   2977.1 us (  0.21 TFLOPS,   0.2% FFMA,   418 GB/s) | speedup(flushed)  0.27 | tf-gain  0.27
+  M=  2 | rung1 warm    802.6 flushed    806.5 | rung2 warm   2917.0 flushed   2917.5 us (  0.43 TFLOPS,   0.4% FFMA,   427 GB/s) | speedup(flushed)  0.28 | tf-gain  0.28
+  M=  4 | rung1 warm    804.3 flushed    857.1 | rung2 warm   3097.1 flushed   2832.8 us (  0.88 TFLOPS,   0.8% FFMA,   440 GB/s) | speedup(flushed)  0.30 | tf-gain  0.30
+  M=  8 | rung1 warm    765.7 flushed    769.4 | rung2 warm   2798.8 flushed   2802.6 us (  1.78 TFLOPS,   1.6% FFMA,   446 GB/s) | speedup(flushed)  0.27 | tf-gain  0.27
+  M= 16 | rung1 warm   1151.9 flushed   1186.0 | rung2 warm   2836.5 flushed   2941.0 us (  3.39 TFLOPS,   3.0% FFMA,   427 GB/s) | speedup(flushed)  0.40 | tf-gain  0.40
+  M= 32 | rung1 warm   5801.5 flushed   5822.1 | rung2 warm   3435.2 flushed   3429.6 us (  5.81 TFLOPS,   5.2% FFMA,   369 GB/s) | speedup(flushed)  1.70 | tf-gain  1.70
+  M= 64 | rung1 warm  12797.1 flushed  12921.4 | rung2 warm   3525.1 flushed   3455.8 us ( 11.53 TFLOPS,  10.3% FFMA,   372 GB/s) | speedup(flushed)  3.74 | tf-gain  3.74
+  M=128 | rung1 warm  27948.3 flushed  27855.6 | rung2 warm   4035.1 flushed   3882.9 us ( 20.52 TFLOPS,  18.4% FFMA,   341 GB/s) | speedup(flushed)  7.17 | tf-gain  7.17
+  M=256 | rung1 warm  56541.1 flushed  56222.7 | rung2 warm   7696.2 flushed   7711.9 us ( 20.66 TFLOPS,  18.5% FFMA,   182 GB/s) | speedup(flushed)  7.29 | tf-gain  7.29
+  M=512 | rung1 warm 111915.3 flushed 130643.6 | rung2 warm  16665.5 flushed  16529.6 us ( 19.28 TFLOPS,  17.3% FFMA,    94 GB/s) | speedup(flushed)  7.90 | tf-gain  7.90
