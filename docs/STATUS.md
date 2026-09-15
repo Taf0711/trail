@@ -42,29 +42,29 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- **Decode-GEMV family CLOSED** (E0005 v2 = production kernel at
-  82–83.5% of the ceiling; residual attributed to DRAM-protocol/L2 mix,
-  ncu-only). M2 has begun: **EXP9 / Rung 0 (naive f32 GEMM) measured** —
-  Tier-0 established over the real Qwen3-1.7B matrix (config.json-fetched
-  shapes). Headline: naive plateaus at 0.6–0.8% of the FFMA peak,
-  1.75×–140× off the ideal roofline, never BW-bound in-sweep (latency/
-  issue-bound), with occupancy starvation at small M (16.7–57.2% spread
-  where the 30–40% prediction assumed a filled machine). No falsifier
-  fired; the pre-registered ideal-traffic crossover **M\* ≈ 131–140**
-  remains the reference line for the tiled rungs.
+- **M2 Rung 1 (EXP10) measured — KEEP.** Coalesced k-parallel mapping + ILP +
+  weight-stationary reuse + adaptive warps: **2.39×–15.29× speedup**, TFLOPS
+  0.70–0.93 → peak **8.34** (7.5% of FFMA, LM head M=16). Predictions (a)/(b)
+  partially hit; the X-re-read secondary prediction was CONFIRMED (TFLOPS
+  curve peaks mid-M then declines at large M — falsifier 2 fired for MLP
+  down, 2.44 TFLOPS at M=512). **Falsifier 3 fired and was resolved as an
+  L2-residency methodology artifact** (any W < ~96 MB stays L2-resident
+  across repeated launches; audit: 1.06× for the 1.24 GB shape vs 1.59–3.04×
+  for 16.8–100.7 MB shapes) → protocol rule adopted in docs/TESTING.md.
+  DRAM-honest M=1 is 54–87% of ceiling (LM head 87–93% = best).
 
 ## Next Smallest Step
 
-- **EXP10 claim (M2 Rung 1)**: coalesced + shared-memory tiling — lanes
-  cover k for coalesced W/X loads, independent accumulators break the
-  dependent-FFMA chain, X staged in shared memory per tile; accumulation
-  order changes → cancellation-aware bound gate (E0004 policy). Prediction
-  frame to register before coding: plateau should jump from ~0.8 TFLOPS to
-  a meaningful FFMA fraction; M=1 should recover toward the 83% ceiling.
-- Roadmap: docs/ROADMAP.md C3 (ladder: coalesced → shared tiling →
-  register tiling → tensor-core → cuBLAS/CUTLASS Tier-3).
-- Standing owner action: enable GPU performance counters (ncu) — closes
-  the E0006/E0007/E0008 mechanism questions.
+- **EXP11 claim (M2 Rung 2)**: shared-memory tiling — stage X (and W)
+  tiles so X is not re-read per output row; expected effect: the large-M
+  TFLOPS decline flattens and the pre-registered M\* ≈ 135 line becomes
+  approachable. Claim before coding, and run the bench under the new
+  **L2-flush protocol** from the start so the rung comparison is
+  DRAM-honest.
+- Then: register tiling → tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS
+  Tier-3 (todos T-004…T-007).
+- Standing owner action: enable GPU performance counters (ncu) — would
+  directly confirm the X-re-read/L2 diagnosis and the Rung-0 chain limits.
 - Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding

@@ -85,6 +85,30 @@ sm_120 V-scale swizzle bug passed local tests at 4× worse ΔNLL).
 - Anything above the measured copy ceiling (not the 1.79 TB/s spec sheet) is
   investigated before publishing, not after.
 
+## L2-residency protocol (added 2026-09-15, from EXP10 falsifier 3)
+
+A repeated-launch benchmark (warmup + N timed samples over the same
+buffers) keeps any weight working set that fits in L2 (~96 MB on this GPU)
+cache-resident. The timed kernel then streams from L2, so its apparent
+bandwidth can exceed the measured DRAM ceiling and the row stops being a
+DRAM-boundness claim.
+
+Audit evidence (`experiments/artifacts/E0010_l2_audit.txt`: 256 MB memset
+between timed launches to evict L2): the cold/warm time ratio was 1.06×
+for a 1244.7 MB weight matrix, but 1.59× / 2.19× / 2.32× / 3.04× for
+16.8 / 33.6 / 50.3 / 100.7 MB matrices.
+
+Rules for every row from EXP11 onward:
+
+1. If the weight working set exceeds ~L2, the standard warm repeated-launch
+   row is DRAM-honest.
+2. If it fits in ~L2, either flush L2 (memset a larger-than-L2 buffer)
+   between timed launches and record the flushed number as the DRAM-honest
+   one, or label the row **L2-resident** and make no DRAM-boundness claim.
+3. A reading above the DRAM ceiling is a protocol alarm, never a win: audit
+   it before recording it as a result.
+4. Rung-to-rung comparisons must use the same protocol on both sides.
+
 ## Reproducing a result
 
 From a **Developer PowerShell for VS 2022** (or after sourcing

@@ -648,6 +648,57 @@ tiny: M·K·4 B; L2-resident) — no shared-memory staging yet (deliberately
   ideal bytes, TFLOPS, %-of-ceilings, meas/ideal) so the rungs are
   directly comparable on the identical shape × M matrix.
 
+**Pre-timing implementation notes (recorded BEFORE any measurement of this
+rung):**
+1. Warps-per-block adapts to `min(4, M)` so no warp idles when M < 4 —
+   Rung 0's small-M starvation must not be reintroduced by the new mapping.
+2. **Secondary prediction (X re-reads through L2)**: with one output row per
+   block, X is re-read once per (m,n) pair, i.e. X traffic = N·M·K·4 bytes
+   served from L2/L1 (DRAM X traffic stays compulsory). At large N·M this
+   term is expected to bind BEFORE the FFMA wall, so the Rung-1 TFLOPS may
+   land below the 6–20 band on the large-N shapes at large M (order-of-
+   magnitude estimate: LM head M=512 ≈ 608 GB of L2 X-traffic → ~5 TFLOPS).
+   That shortfall is Rung 2's (shared-memory staging) measured motivation —
+   record it, do not treat it as a surprise.
+
+**Measured (2026-09-15, paired same-run, GPU idle 31 °C at start; full raw
+log = artifacts/E0010_bench.txt):**
+
+| Shape | M=1 rung0→rung1 | rung1 %BW (warm) | mid-M peak TFLOPS | M=512 TFLOPS | speedup range |
+|---|---|---|---|---|---|
+| QKV 4096×2048 | 56→9 µs | 209% (L2) | 7.94 @M=64 | 5.40 | 5.9–9.9× |
+| O-proj 2048×2048 | 56→7 µs | 132% (L2) | 6.26 @M=128 | 6.39 | 7.1–7.9× |
+| MLP gate+up 12288×2048 | 102→23 µs | 241% (L2) | 7.34 @M=8 | 3.82 | 4.1–10.6× |
+| MLP down 2048×6144 | 162→13 µs | 215% (L2) | 5.07 @M=8 | 2.44 | 2.7–15.3× |
+| LM head 151936×2048 | 1770→739 µs | **93.1% (DRAM-honest)** | **8.34 @M=16** | 3.07 | 2.4–9.0× |
+
+Gates: ctest 55/55 (3 new: bound-gate over the 64-shape grid × 4 seeds,
+zero-operand exact with odd K=129, determinism), memcheck 0, racecheck 0,
+SASS (62× LDG.E.128 — coalescing visible in the ISA). **KEEP.**
+
+- Prediction (a) (M=1 → 85–98% of ceiling): **PARTIALLY HIT** — warm rows
+  read 93–241%, but the falsifier-3 audit showed those are L2-inflated;
+  DRAM-honest M=1 is **54–87%** (top of band only for the genuinely
+  DRAM-bound LM head shape, 87–93%).
+- Prediction (b) (large-M 6–20 TFLOPS): **PARTIALLY HIT** — peak 8.34
+  (LM head M=16) / 7.94 (QKV M=64) inside the band, but the curve FALLS
+  with M to 2.44–6.39 at M=512 → **falsifier 2 (< 3 TFLOPS) fired for MLP
+  down and was nearly met by LM head**.
+- Secondary prediction (X re-reads through L2 bind at large N·M):
+  **CONFIRMED** — TFLOPS-vs-M peaks mid-M then declines (registered
+  estimate ~5 TFLOPS for LM head M=512; measured 3.07). This is Rung 2's
+  measured motivation.
+- **Falsifier 3 fired and was resolved as an L2-residency methodology
+  artifact**, not a kernel bug: any W below the ~96 MB L2 stays resident
+  across repeated launches (audit: 1.06× cold/warm for the 1.24 GB LM
+  head, 1.59–3.04× for the 16.8–100.7 MB shapes). **Protocol rule adopted
+  (docs/TESTING.md): flush L2 between timed launches or label the row
+  L2-resident** — applies to all later rungs too.
+
+Full record: `experiments/E0010_gemm_f32_coalesced.md`. Next: **EXP11 claim
+— Rung 2 shared-memory tiling** (plus the L2-flush protocol from the
+start).
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

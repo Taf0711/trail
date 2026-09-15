@@ -15,6 +15,12 @@
 - Correctness: `trail_cuda_tests` (bitwise vs CPU reference) + compute-sanitizer
   memcheck = 0 errors, run same day.
 - Environment: driver, toolkit, clocks, and GPU idle state recorded per row.
+- **L2-residency protocol (added 2026-09-15, EXP10)**: a repeated-launch
+  benchmark keeps any weight working set smaller than L2 (~96 MB) cache-
+  resident, so apparent BW above the 1810 GB/s DRAM ceiling means the row
+  measured L2, not DRAM. Either flush L2 (a >L2 memset) between timed
+  launches, or label the row "L2-resident" and make no DRAM-boundness
+  claim from it. Audit evidence: `experiments/artifacts/E0010_l2_audit.txt`.
 
 ## Results
 
@@ -141,6 +147,13 @@
 | 2026-09-14 | EXP9 naive f32 GEMM — LM head 151936×2048, M=1 | M=1 | 1760 | 1777 | 1800 | µs | 701 GB/s | 38.7% BW | (same binary) | in the 30–40% band; 4750-block grid fills the machine |
 | 2026-09-14 | EXP9 naive f32 GEMM — TFLOPS plateau, all shapes, M≥16 | — | — | — | — | — | 0.70–0.93 TFLOPS | 0.6–0.8% FFMA | (same binary) | latency/issue-bound: sequential dependent-FFMA chain (K deep) + 32 scattered W sectors per warp-step; time linear in M — naive never BW-bound (prediction b held); occupancy quantization visible (O-proj M=8→16: same µs, 2× flops) |
 | 2026-09-14 | **EXP9 Tier-0 verdict** | — | — | — | — | — | — | — | — | KEEP as Tier-0; ladder envelope 1.75×–140× vs ideal roofline; ideal-traffic M\* ≈ 131–140 (pre-registered from measured 111.4 TFLOPS / 1810 GB/s) remains the reference line; full 50-cell table in experiments/E0009_gemm_f32_naive.md |
+| 2026-09-15 | **EXP10 rung1 coalesced — LM head 151936×2048, M=1 (DRAM-honest)** | M=1 | 739 | 739 | 740 | µs | **1685 GB/s** | **93.1% BW** | 0 err + racecheck 0 | M2 Rung 1; 2.39× vs rung0; the only shape with W (1.24 GB) > L2, so this is a genuine DRAM-bound row |
+| 2026-09-15 | EXP10 rung1 — QKV fused 4096×2048, M=1 | M=1 | 9 | 9 | 9 | µs | 3783 GB/s | 209% BW (L2) | (same binary) | W=33.6 MB stays L2-resident → **falsifier 3 audit**; DRAM-honest (flushed) = 29.5 µs / 1137 GB/s / 62.8% |
+| 2026-09-15 | EXP10 rung1 — MLP gate+up, M=1 | M=1 | 23 | 23 | 23 | µs | 4362 GB/s | 241% BW (L2) | (same binary) | largest L2 inflation (W=100.7 MB, cold/warm 3.04×); DRAM-honest 74.6 µs / 1350 GB/s / 74.6% |
+| 2026-09-15 | EXP10 rung1 — LM head M=16 (TFLOPS peak) | M=16 | 1179 | 1195 | 1202 | µs | 1050 GB/s | 58.0% BW | (same binary) | **8.34 TFLOPS = 7.5% of FFMA peak** — the ladder's best point, inside the pre-registered 6–20 band |
+| 2026-09-15 | EXP10 rung1 — MLP down 2048×6144, M=512 | M=512 | 4946 | 5278 | 5406 | µs | 13 GB/s | 0.7% BW | (same binary) | 2.44 TFLOPS → **falsifier 2 (< 3 TFLOPS) fired**; X re-reads through L2 bind at large N·M as pre-registered |
+| 2026-09-15 | **EXP10 L2-residency audit** | M=1, 5 shapes | — | — | — | — | 972–1577 GB/s flushed | — | — | 256 MB memset between timed launches: cold/warm 1.59× (16.8 MB), 2.19× (33.6 MB), 2.32× (50.3 MB), 3.04× (100.7 MB), **1.06× (1.24 GB > L2)** → the >1810 GB/s rows measured L2 bandwidth; protocol rule adopted in Method above |
+| 2026-09-15 | **EXP10 verdict** | — | — | — | — | — | — | — | — | **KEEP Rung 1**: 2.39×–15.29× speedup, TFLOPS 0.70–0.93 → peak 8.34; predictions (a)/(b) partially hit, X-re-read secondary prediction confirmed; rung2 (shared tiling) motivation measured; full matrix in experiments/E0010_gemm_f32_coalesced.md |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's

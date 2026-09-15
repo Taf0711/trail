@@ -192,6 +192,27 @@ research notes, Feynman repair, lit review, plan spec.
 4. **Next**: EXP10 claim — coalesced + shared-memory tiling (bound gate,
   E0004 policy).
 
+## Addendum 5 (2026-09-15, ~01:00): M2 Rung 1 measured — 2.4–15.3×, plus an L2 protocol discovery
+
+1. **EXP10 (coalesced k-parallel GEMM)**: warp-per-output, lanes over k
+   (float4 → 512-B contiguous warp loads), 4 independent accumulators,
+   weight-stationary row ownership, warps = min(4, M). Gates: ctest 55/55
+   (bound-gate, odd-K fallback, determinism), memcheck 0, racecheck 0,
+   SASS shows **62× LDG.E.128**.
+2. **Measured (paired vs Rung 0)**: **2.39×–15.29×**; TFLOPS 0.70–0.93 →
+   peak **8.34** (7.5% of FFMA, LM head M=16). Prediction (a) M=1 85–98%
+   partially hit (DRAM-honest 54–87%); (b) 6–20 TFLOPS partially hit (peak
+   in band, then decline with M); falsifier 2 fired for MLP down (2.44
+   TFLOPS at M=512) — confirming the pre-registered X-re-read term.
+3. **Falsifier 3 → L2-residency discovery**: several rows read 209–241% of
+   the DRAM ceiling. Audit (256 MB memset between timed launches):
+   cold/warm = 1.59×–3.04× for W ≤ 100.7 MB but **1.06× for the 1.24 GB
+   shape** → repeated-launch benchmarks measure L2 bandwidth once W fits in
+   L2. New protocol rule recorded in docs/TESTING.md (flush or label
+   "L2-resident") and mandatory from EXP11 on.
+4. **Next**: EXP11 claim — Rung 2 shared-memory tiling (X reuse across
+   output rows), with the L2-flush protocol from the start.
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:

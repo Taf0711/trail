@@ -118,14 +118,19 @@ at small M (16.7–57.2% spread; the 64-block shapes idle >60% of SMs),
 occupancy quantization visible at the 170-SM boundary. No falsifier
 fired. Full record: experiments/E0009_gemm_f32_naive.md.
 
-**Next: Rung 1 claim (EXP10) — REGISTERED** — coalesced k-parallel mapping
-(warp-per-output, lanes over k, 4 independent accumulators, block owns
-output row and loops the batch for weight-stationary reuse; bound gate per
-E0004 policy). Predictions: M=1 recovers to 85–98% of the BW ceiling
-(E0004/E0005 precedent), large-M TFLOPS 6–20 (5–18% of FFMA peak), and the
-flat-in-M TFLOPS curve must start rising. Ladder: coalesced (EXP10) →
-shared-memory tiling → register tiling → tensor-core (488 TFLOPS ceiling)
-→ cuBLAS/CUTLASS Tier-3.
+**Next: Rung 1 measured (EXP10) — KEEP** — coalesced k-parallel mapping
+scores **2.39×–15.29×** over Tier 0 and lifts the plateau from 0.70–0.93 to
+a peak of **8.34 TFLOPS** (LM head M=16). Predictions (a)/(b) partially hit;
+the pre-registered X-re-read secondary prediction was CONFIRMED (TFLOPS peak
+mid-M, then decline at large M; falsifier 2 fired for MLP down at 2.44
+TFLOPS). Falsifier 3 (apparent BW > ceiling) was resolved by audit as
+**L2 residency** and produced a new protocol rule (docs/TESTING.md) that all
+later rungs must follow. DRAM-honest M=1: 54–87% of ceiling.
+
+**Next: Rung 2 claim (EXP11)** — shared-memory tiling to stop re-reading X
+per output row; expect the large-M decline to flatten toward the
+M\* ≈ 135 line. Then register tiling → tensor-core (488 TFLOPS ceiling) →
+cuBLAS/CUTLASS Tier-3.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-
