@@ -19,6 +19,7 @@ add_executable(trail_bench_gemv_tiled bench/gemv_q4k_tiled_bench.cu)
 add_executable(trail_bench_gemv_composed bench/gemv_q4k_composed_bench.cu)
 add_executable(trail_bench_gemv_contig bench/gemv_q4k_warp_contig_bench.cu)
 add_executable(trail_bench_gemv_soa bench/gemv_q4k_soa_bench.cu)
+add_executable(trail_bench_gemm_f32 bench/gemm_f32_bench.cu)
 
 if(MSVC)
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=/W4)
@@ -26,7 +27,7 @@ else()
     set(TRAIL_HOST_WARNING_FLAGS -Xcompiler=-Wall,-Wextra)
 endif()
 
-foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add trail_bench_vector_add_f4 trail_l0_microbench trail_l0_mma trail_bench_fused trail_bench_gemv trail_bench_gemv_tiled trail_bench_gemv_composed trail_bench_gemv_contig trail_bench_gemv_soa)
+foreach(target trail_smoke trail_bench trail_bench_graph trail_bench_vector_add trail_bench_vector_add_f4 trail_l0_microbench trail_l0_mma trail_bench_fused trail_bench_gemv trail_bench_gemv_tiled trail_bench_gemv_composed trail_bench_gemv_contig trail_bench_gemv_soa trail_bench_gemm_f32)
     target_include_directories(${target} PRIVATE include src references/cpp)
     set_target_properties(${target} PROPERTIES CUDA_ARCHITECTURES 120)
     target_compile_options(${target} PRIVATE
@@ -82,6 +83,16 @@ target_compile_options(trail_cuda_tests_gemv_tiled PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:${TRAIL_HOST_WARNING_FLAGS}>
 )
 catch_discover_tests(trail_cuda_tests_gemv_tiled)
+
+# EXP9 M2 Rung 0 naive f32 GEMM differential test (bitwise vs CPU).
+add_executable(trail_cuda_tests_gemm_f32 tests/cuda/gemm_f32_test.cu)
+target_include_directories(trail_cuda_tests_gemm_f32 PRIVATE include src references/cpp tests/cuda)
+target_link_libraries(trail_cuda_tests_gemm_f32 PRIVATE Catch2::Catch2)
+set_target_properties(trail_cuda_tests_gemm_f32 PROPERTIES CUDA_ARCHITECTURES 120)
+target_compile_options(trail_cuda_tests_gemm_f32 PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:${TRAIL_HOST_WARNING_FLAGS}>
+)
+catch_discover_tests(trail_cuda_tests_gemm_f32)
 
 # EXP1 float4 candidate differential test.
 add_executable(trail_cuda_tests_f4 tests/cuda/vector_add_float4_test.cu)
