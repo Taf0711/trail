@@ -42,29 +42,29 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- **M2 Rung 1 (EXP10) measured — KEEP.** Coalesced k-parallel mapping + ILP +
-  weight-stationary reuse + adaptive warps: **2.39×–15.29× speedup**, TFLOPS
-  0.70–0.93 → peak **8.34** (7.5% of FFMA, LM head M=16). Predictions (a)/(b)
-  partially hit; the X-re-read secondary prediction was CONFIRMED (TFLOPS
-  curve peaks mid-M then declines at large M — falsifier 2 fired for MLP
-  down, 2.44 TFLOPS at M=512). **Falsifier 3 fired and was resolved as an
-  L2-residency methodology artifact** (any W < ~96 MB stays L2-resident
-  across repeated launches; audit: 1.06× for the 1.24 GB shape vs 1.59–3.04×
-  for 16.8–100.7 MB shapes) → protocol rule adopted in docs/TESTING.md.
-  DRAM-honest M=1 is 54–87% of ceiling (LM head 87–93% = best).
+- **M2 Rung 2 (EXP11) measured — KEEP for large M, hybrid dispatch.**
+  Double-tiled GEMM (BM=128/BN=64/BK=32, TM=TN=4, 512 threads): **7.90×**
+  over Rung 1 at LM head M=512 (19.28 TFLOPS) and **25.09 TFLOPS = 22.5% of
+  FFMA peak** at MLP gate+up M=512 (the ladder's best). Prediction (a) HIT
+  (10–30 band), (c) CONFIRMED (the TFLOPS curve now rises with M and
+  plateaus) — Rung 1's large-M collapse was the L2 re-read term. **Falsifier
+  2 fired at small M** (M=1 regressed 3.7–24.6×: the BM=128 A-tile is
+  mostly predicated off), so the pre-registered remedy applies: **Rung 1 =
+  small-M kernel, Rung 2 = large-M kernel.** Measured dispatch crossover:
+  M ∈ [32, 256], centred ~64–128 — bracketing the pre-registered
+  ideal-traffic M\* ≈ 131–140, now measured in dispatch terms.
 
 ## Next Smallest Step
 
-- **EXP11 claim (M2 Rung 2)**: shared-memory tiling — stage X (and W)
-  tiles so X is not re-read per output row; expected effect: the large-M
-  TFLOPS decline flattens and the pre-registered M\* ≈ 135 line becomes
-  approachable. Claim before coding, and run the bench under the new
-  **L2-flush protocol** from the start so the rung comparison is
-  DRAM-honest.
-- Then: register tiling → tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS
-  Tier-3 (todos T-004…T-007).
+- **EXP12 claim (M2 Rung 3)**: larger register tiles and/or BM=M tiling so
+  W is read once even at M=512 (the 4× BM<M re-read is a known, recorded
+  limit), targeting the 25 → 50+ TFLOPS range; the plateau sits 4.4–6.5×
+  below the FFMA peak. Claim before coding; L2-flush protocol continues.
+- Then tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3
+  (todos T-005…T-007).
 - Standing owner action: enable GPU performance counters (ncu) — would
-  directly confirm the X-re-read/L2 diagnosis and the Rung-0 chain limits.
+  directly confirm the L2/shared-bandwidth decomposition that the Rung 3
+  design depends on.
 - Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding

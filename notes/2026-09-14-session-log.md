@@ -213,6 +213,27 @@ research notes, Feynman repair, lit review, plan spec.
 4. **Next**: EXP11 claim — Rung 2 shared-memory tiling (X reuse across
    output rows), with the L2-flush protocol from the start.
 
+## Addendum 6 (2026-09-15, ~02:00): M2 Rung 2 measured — 7.9× at large M, hybrid dispatch found
+
+1. **Pre-claim term ablation** (before writing the claim): collapsing X or W
+   re-reads independently gave 0.19–0.58× — symmetric, each binding — and
+   collapsing BOTH still left LM head M=512 at ~13.8 TFLOPS. So Rung 2 needed
+   shared staging *and* register reuse, not one variable.
+2. **EXP11 (double-tiled GEMM)** implemented (BM=128/BN=64/BK=32, 512
+   threads, TM=TN=4, padded shared). Gates: ctest 58/58 (tile-boundary
+   shapes 130/70/33 included), memcheck 0, racecheck 0, SASS = 928 inst with
+   **512 FFMA + 66 LDS.128**.
+3. **Measured under the mandatory L2-flush protocol** (warm + flushed for
+   both rungs): **7.90×** at LM head M=512 (19.28 TFLOPS) and **25.09
+   TFLOPS = 22.5% of FFMA peak** at MLP gate+up (ladder best); prediction
+   (a) HIT, (c) CONFIRMED. **Falsifier 2 fired at small M** (M=1 regressed
+   3.7–24.6× — the BM=128 A-tile is mostly predicated off) → hybrid
+   dispatch: Rung 1 ≤ ~64, Rung 2 above.
+4. **The M\* line is now measured**: dispatch crossover M ∈ [32, 256],
+   centred ~64–128, bracketing the pre-registered ideal-traffic M\* ≈ 131–140.
+5. **Next**: EXP12 claim — Rung 3 (larger register tiles / BM=M tiling),
+   target 25 → 50+ TFLOPS.
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:

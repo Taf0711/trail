@@ -765,6 +765,53 @@ row 0; MODE 2: every n reads W row 0; MODE 3: both):
   fits in L2, so every row is reported flushed (DRAM-honest) with the warm
   number alongside.
 
+**Measured (2026-09-15; L2-flush protocol mandatory — warm AND flushed
+recorded for both rungs):**
+
+| Shape | M | rung1 flushed µs | rung2 flushed µs | speedup | rung2 TFLOPS (%FFMA) |
+|---|---|---|---|---|---|
+| QKV 4096×2048 | 1 | 12.5 | 161.6 | **0.08** | 0.10 |
+| QKV | 128 | 318.3 | 248.6 | 1.28 | 8.64 |
+| QKV | 512 | 1791 | 433 | **4.14** | 19.84 (17.8%) |
+| O-proj 2048×2048 | 1 | 8.4 | 161.6 | **0.05** | 0.05 |
+| O-proj | 512 | 795 | 249 | **3.20** | 17.27 (15.5%) |
+| MLP gate+up | 1 | 68.3 | 365.0 | **0.19** | 0.14 |
+| MLP gate+up | 512 | 6743 | 1027 | **6.57** | **25.09 (22.5%)** |
+| MLP down | 1 | 19.4 | 477.6 | **0.04** | 0.05 |
+| MLP down | 512 | 4573 | 719 | **6.36** | 17.92 (16.1%) |
+| LM head | 1 | 808 | 2977 | **0.27** | 0.21 |
+| LM head | 512 | 130644 | 16530 | **7.90** | 19.28 (17.3%) |
+
+Gates: ctest 58/58 (bound gate over M{1,3,8,64,130} × N{1,17,64,128} ×
+K{1,3,33,256,512} × 3 seeds — tile/chunk-boundary shapes included — plus
+zero-exact and determinism), memcheck 0, racecheck 0, SASS (928 inst,
+**512 FFMA** = 16/k-step × BK fully unrolled, **66 × LDS.128**).
+
+**Verdict: KEEP for large M; falsifier 2 fired at small M → hybrid dispatch.**
+- Prediction (a) **HIT**: 19.28 (LM head M=512) and 25.09 TFLOPS (gate+up
+  M=512, = 22.5% of FFMA peak, the ladder's best) inside the 10–30 band,
+  from Rung 1's 3.07.
+- Prediction (b) **FAILED — falsifier 2 fired**: M=1 regressed 3.7–24.6×
+  (BM=128 stages a mostly-predicated A-tile at small M). Pre-registered
+  remedy adopted: **Rung 1 keeps small M, Rung 2 takes large M.**
+- Prediction (c) **CONFIRMED**: the TFLOPS curve now rises with M and
+  plateaus (LM head 0.21 → 20.7; gate+up 0.14 → 25.1) — Rung 1's large-M
+  collapse was the L2 re-read term.
+- Falsifier 1 not fired (17–25 TFLOPS ≫ the 6 TFLOPS floor); falsifier 3
+  not fired under the flushed protocol (which behaved as predicted: rung2
+  QKV M=512 325 warm vs 433 flushed = 33% L2 inflation; LM head W > L2 →
+  no inflation).
+- **Measured dispatch crossover**: LM head M=32, gate+up M=64, down/QKV
+  M=128, O-proj M=256 → **M ∈ [32,256], centred ~64–128**, versus the
+  pre-registered ideal-traffic **M\* ≈ 131–140** — the theoretical line is
+  now measured in dispatch terms.
+- Remaining headroom: plateau 17–25 TFLOPS is 4.4–6.5× below FFMA peak;
+  the ablation's compute floor and the BM<M W-re-read (4× at M=512) both
+  point to larger register tiles / BM=M tiling = Rung 3.
+
+Full record: `experiments/E0011_gemm_f32_tiled.md`. Next: **EXP12 claim —
+Rung 3 register tiling / BM=M**, target 25 → 50+ TFLOPS.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
