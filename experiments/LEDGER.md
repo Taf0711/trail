@@ -504,6 +504,63 @@ baselines); next claims belong to C3/M2 (GEMM/tensor-core ladder) or M5
 
 Full record: `experiments/E0008_gemv_soa.md`.
 
+## EXP9 — M2 Rung 0: f32 GEMM baseline + regime map (benchmark matrix from the real model)
+
+**Why now**: the decode-GEMV family is closed at ~83%; the complementary
+regime (prefill / batched GEMM) is the untouched half of the roofline. M2
+entry conditions were met at C3. Model-realistic shapes are taken from the
+ACTUAL `Qwen/Qwen3-1.7B` config.json (fetched 2026-09-14, not from memory):
+hidden 2048, intermediate 6144, heads 16 / KV 8, head_dim 128, layers 28,
+vocab 151936, tied embeddings, bf16.
+
+**Benchmark matrix (weight-stationary: Y[M,N] = X[M,K] · W[N,K]^T):**
+
+| Layer | N | K | flops @ M=512 |
+|---|---|---|---|
+| QKV fused (16+8+8 heads × 128) | 4096 | 2048 | 8.6 GFLOP |
+| O-proj | 2048 | 2048 | 4.3 GFLOP |
+| MLP gate+up fused (2×6144) | 12288 | 2048 | 25.8 GFLOP |
+| MLP down | 2048 | 6144 | 12.9 GFLOP |
+| LM head | 151936 | 2048 | 318.6 GFLOP |
+
+M sweep: 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 (MARLIN batch-regime ladder).
+
+**Pre-registered crossover prediction (from measured L0 rates, not spec):**
+R_ffma = 111.4 TFLOPS, BW = 1810 GB/s → crossover AI = **61.5 flops/byte**.
+With ideal (perfectly blocked) traffic AI(M) = MNK / (2(MK + NK + MN)):
+**M\* ≈ 135 (QKV 135, O-proj 140, gate+up 132, down 134, LM head 131)** — a
+tight cluster, because M\* is set by 123·NK/(NK − 123K − 123N) and all these
+shapes are N,K ≫ M\*. At M=1 AI = 0.50 flops/byte for every shape (deeply
+BW-bound, consistent with the closed decode family); at M=512 AI = 171–204
+(compute-bound by 3×).
+
+**Rung 0 candidate**: naive f32 GEMM — one thread per output element, K-loop,
+2D grid over (M,N). Deliberately untiered: it establishes the correctness
+harness and the Tier-0 baseline row that every later rung must beat.
+- **Prediction**: (a) at M=1 the naive kernel is pattern-limited like E0003's
+  one-thread-per-row f32 GEMV ≈ **30–40% of the BW ceiling** (665→~700 GB/s);
+  (b) naive M\* will sit FAR ABOVE 135 (X and W re-reads multiply real bytes —
+  the ideal AI model ignores blocking), expected **M\* ≈ 400–1000+**, i.e. the
+  naive rung stays BW-bound across the whole sweep; (c) large-M achieved rate
+  ≤ **25% of 111.4 TFLOPS** (no register blocking, no ILP, no tensor cores).
+- **Falsifiers**: (1) naive M=1 > 90% of ceiling → the decode family's
+  pattern conclusions do not transfer to GEMM (surprising; record);
+  (2) naive M\* measured within 135 ± 30 → real traffic is far better than
+  the no-blocking model predicts (would mean L2 absorbs the re-reads);
+  (3) achieved TFLOPS > 111.4 or BW > 1810 GB/s → measurement bug, audit;
+  (4) any bitwise mismatch vs the CPU reference → stop.
+- **Correctness**: new `reference::gemm_f32` (CPU, sequential-k fmaf order) +
+  naive kernel with the SAME accumulation order → **bitwise gate** (the
+  strongest gate; E0003 precedent), plus edge shapes (M or N = 1, K = 1,
+  non-power-of-two, zero/±inf weights), memcheck + racecheck, SASS artifact.
+- **Rows recorded**: per (shape, M): p5/median/p95 µs, achieved GB/s,
+  achieved TFLOPS, % of BW ceiling, % of FFMA peak.
+
+**Ladder after Rung 0** (each with its own claim, one variable at a time):
+coalesced → shared-memory tiling → register tiling → tensor-core (mma/wmma)
+→ Tier-3 comparison vs cuBLAS/CUTLASS. Done when the roofline plot
+bandwidth-vs-TFLOPS matches or refutes the M\* ≈ 135 prediction.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

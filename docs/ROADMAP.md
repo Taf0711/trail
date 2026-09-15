@@ -102,7 +102,16 @@ count from SASS as the primary metric (that's the diagnosed limiter).
 **Done when**: one variant wins on the same-shape benchmark with all gates
 green; the other is recorded REJECTED with mechanism explained.
 
-## C3 — M2: GEMM/tensor-core ladder (batch-regime complement)
+## C3 — M2: GEMM/tensor-core ladder (IN PROGRESS — Rung 0 claim registered, EXP9)
+
+**Benchmark matrix now fixed from the REAL `Qwen/Qwen3-1.7B` config.json**
+(fetched 2026-09-14): QKV fused 4096×2048, O-proj 2048×2048, MLP gate+up
+12288×2048, MLP down 2048×6144, LM head 151936×2048; M sweep 1→512.
+**Pre-registered:** ideal-traffic crossover M\* ≈ 131–140 (f32, from measured
+111.4 TFLOPS / 1810 GB/s → AI 61.5 flops/byte); the naive Rung-0 kernel is
+predicted to stay BW-bound far beyond that (X/W re-reads), landing at
+M\* ≈ 400–1000. See experiments/LEDGER.md EXP9 for the full claim, band,
+and falsifiers.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-
