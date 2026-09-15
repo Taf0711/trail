@@ -42,29 +42,34 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- **M2 Rung 2 (EXP11) measured — KEEP for large M, hybrid dispatch.**
-  Double-tiled GEMM (BM=128/BN=64/BK=32, TM=TN=4, 512 threads): **7.90×**
-  over Rung 1 at LM head M=512 (19.28 TFLOPS) and **25.09 TFLOPS = 22.5% of
-  FFMA peak** at MLP gate+up M=512 (the ladder's best). Prediction (a) HIT
-  (10–30 band), (c) CONFIRMED (the TFLOPS curve now rises with M and
-  plateaus) — Rung 1's large-M collapse was the L2 re-read term. **Falsifier
-  2 fired at small M** (M=1 regressed 3.7–24.6×: the BM=128 A-tile is
-  mostly predicated off), so the pre-registered remedy applies: **Rung 1 =
-  small-M kernel, Rung 2 = large-M kernel.** Measured dispatch crossover:
-  M ∈ [32, 256], centred ~64–128 — bracketing the pre-registered
-  ideal-traffic M\* ≈ 131–140, now measured in dispatch terms.
+- **M2 Rung 3 (EXP12) measured — falsifier 2 FIRED → RE-DIAGNOSE before
+  another rung.** 8×8 register tiles (BM=256/BN=128/BK=16, REG:128, LOCAL:0)
+  gave a genuine but narrow win: **LM head M=256/512 1.27–1.28×**, reaching
+  **30.68 TFLOPS = 27.5% of FFMA peak (new ladder best)**; but MLP gate+up
+  M=512 dropped to 0.76× / 18.94 TFLOPS (< the 30 TFLOPS falsifier line) and
+  the small-N shapes lost 1.6–3×. **Mechanism identified from the data —
+  grid parallelism**, a term no byte-accounting captures: with BN=128, QKV
+  launches only 32 blocks of 512 threads against 170 SMs at M ≤ 256 (138
+  SMs idle). The pre-coding shared-BW hypothesis is therefore *not* the
+  dominant limiter, and the 3.2× unexplained overhead survives (candidates:
+  LDS issue rate, `__syncthreads` stalls, 25% occupancy). Dispatch is now a
+  measured three-way policy: Rung 3 (huge N, M ≥ 256) / Rung 2 (mid) /
+  Rung 1 (< ~64).
 
 ## Next Smallest Step
 
-- **EXP12 claim (M2 Rung 3)**: larger register tiles and/or BM=M tiling so
-  W is read once even at M=512 (the 4× BM<M re-read is a known, recorded
-  limit), targeting the 25 → 50+ TFLOPS range; the plateau sits 4.4–6.5×
-  below the FFMA peak. Claim before coding; L2-flush protocol continues.
+- **EXP13 claim — the re-diagnosis the falsifier mandates** (no new rung
+  until it is in): (a) **occupancy/parallelism sweep** on the *same* 8×8
+  math — BN ∈ {32,64,128} × BM ∈ {64,128,256} at fixed M,N,K, on a small-N
+  shape (QKV) and on LM head — separating grid parallelism from shared-BW
+  from occupancy; (b) **barrier-frequency probe**: BK=16 vs BK=32 (halves
+  `__syncthreads` per K) to price the sync term. Claim first, then run.
+- Design direction if the answer is occupancy: smaller tiles with more
+  blocks + `cp.async` pipelining (not bigger tiles).
 - Then tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3
-  (todos T-005…T-007).
-- Standing owner action: enable GPU performance counters (ncu) — would
-  directly confirm the L2/shared-bandwidth decomposition that the Rung 3
-  design depends on.
+  (todos T-005…T-007; reference comparison recorded in RESULTS baselines).
+- Standing owner action: enable GPU performance counters (ncu) — the
+  re-diagnosis above is exactly what counters would settle in one shot.
 - Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding

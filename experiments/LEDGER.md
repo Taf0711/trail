@@ -863,6 +863,51 @@ registering the unexplained overhead as the thing the falsifiers test.
   M ≤ ~64, Rung 2 (or Rung 3, if it wins) above — the runtime selects by M
   at the layer call site.
 
+**Measured (2026-09-15, L2-flush protocol, flushed medians):**
+
+| Shape | M | rung2 µs | rung3 µs | gain | rung3 TFLOPS (%FFMA) |
+|---|---|---|---|---|---|
+| LM head | 128 | 3348 | 4419 | 0.76 | 18.03 (16.2%) |
+| **LM head** | **256** | 6642 | **5199** | **1.28** | **30.65 (27.5%)** |
+| **LM head** | **512** | 13236 | **10385** | **1.27** | **30.68 (27.5%)** |
+| MLP gate+up | 512 | 1030 | 1361 | **0.76** | 18.94 (17.0%) |
+| QKV | 512 | 433 | 694 | 0.62 | 12.39 (11.1%) |
+| O-proj | 512 | 247 | 691 | 0.36 | 6.22 (5.6%) |
+| MLP down | 512 | 714 | 1980 | 0.36 | 6.51 (5.8%) |
+| all shapes | 1–64 | — | — | 0.32–0.64 | 0.02–5.4 |
+
+Gates: ctest 61/61 (3 new cases straddling BM=256/BN=128/BK=16 ±1,
+including 257×129×33), memcheck 0, racecheck 0. **Pre-timing fix recorded**:
+the first build failed at runtime with "too many resources requested for
+launch" (64 accumulators vs the 128-reg budget at 512 threads) →
+`__launch_bounds__(512,1)` added; res-usage **REG:128 STACK:48 LOCAL:0** —
+at the ceiling, **no spills**, occupancy 1 block/SM (25%), exactly the risk
+the claim registered.
+
+**Verdict: falsifier 2 FIRED, falsifier 1 marginal → RE-DIAGNOSE before
+another rung (per the registered branch).**
+- The win is real but narrow: LM head M=256/512 **1.27–1.28×**, reaching
+  **30.68 TFLOPS = 27.5% of FFMA peak — the ladder's best point** (rung2
+  25.09 / 22.5%); bottom edge of the predicted band, on a predicted cell.
+- **Falsifier 2 fired**: gate+up M=512 = 18.94 TFLOPS (< 30) and 0.76×
+  *slower*, despite the geometry class it should have helped.
+- **Mechanism identified from the data — grid parallelism, a term no
+  byte-accounting captures**: grid = ceil(N/BN) × ceil(M/BM); with BN=128,
+  QKV (N=4096) launches only **32 blocks of 512 threads against 170 SMs**
+  at M ≤ 256 → 138 SMs idle (hence ~3× losses on all small-N shapes).
+  LM head (1187 blocks) is the only shape where the larger tile pays.
+- **The 3.2× unexplained overhead survives** (LOCAL:0, no spills, 25%
+  occupancy): shared-halving predicted ~2× on that term but delivered
+  1.27× ⇒ candidates are LDS issue rate (not bytes), `__syncthreads`
+  stalls (2 barriers per k-chunk), or latency exposure at 25% occupancy.
+- **Dispatch policy now three-way and measured**: Rung 3 for the huge-N /
+  M ≥ 256 corner, Rung 2 for the mid regime, Rung 1 below ~64.
+
+Full record: `experiments/E0012_gemm_f32_reg8.md`. Next: **EXP13 — the
+re-diagnosis the falsifier mandates** (occupancy/parallelism sweep
+BN ∈ {32,64,128} × BM ∈ {64,128,256}; barrier-frequency probe BK=16 vs 32),
+claim first, before any further rung.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

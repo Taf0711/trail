@@ -137,16 +137,20 @@ above**. Measured crossover M ∈ [32, 256], centred ~64–128, bracketing the
 pre-registered ideal-traffic M\* ≈ 131–140. Full record:
 experiments/E0011_gemm_f32_tiled.md.
 
-**Next: Rung 3 claim (EXP12) — REGISTERED** — 8×8 register tiles (halve the
-shared-memory term: loads/FMA 0.5 → 0.25) plus a rebalanced BM=256/BN=128
-tile (W re-read 4× → 2×). Pre-coding accounting on the EXP11 LM head M=512
-cell puts shared traffic as the largest single predicted term (5.1 ms) while
-the measured 16.5 ms sits 3.2× above every individual term — so the claim
-registers that unexplained overhead as what the falsifiers test
-(gain < 1.15× ⇒ shared-BW hypothesis wrong; re-diagnose occupancy/spills/
-sync before another rung). Predicted band 30–55 TFLOPS. Register-pressure
-risk (64 accumulators, ~1 block/SM) registered explicitly. Then tensor-core
-(488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
+**Rung 3 measured (EXP12) — falsifier 2 fired; RE-DIAGNOSE before another
+rung** — 8×8 tiles (BM=256/BN=128/BK=16; REG:128, LOCAL:0, 1 block/SM):
+**LM head M=256/512 1.27–1.28×, 30.68 TFLOPS = 27.5% of FFMA peak (new best)**,
+but MLP gate+up M=512 0.76× / 18.94 TFLOPS (< the 30 falsifier line) and
+small-N shapes 1.6–3× slower. Mechanism: **grid parallelism** — BN=128 leaves
+QKV with 32 blocks vs 170 SMs at M ≤ 256; no byte-accounting term captures it.
+Dispatch is now a measured three-way policy (rung3 huge-N M≥256 / rung2 mid /
+rung1 <64). Full record: experiments/E0012_gemm_f32_reg8.md.
+
+**Next: EXP13 claim (re-diagnosis, no new rung first)** — occupancy/parallelism
+sweep (same 8×8 math, BN ∈ {32,64,128} × BM ∈ {64,128,256}) + barrier-frequency
+probe (BK=16 vs 32) to separate grid parallelism / shared-BW / occupancy / sync
+stalls. If occupancy is the answer: smaller tiles + `cp.async` pipelining, not
+bigger tiles. Then tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-

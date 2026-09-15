@@ -234,6 +234,29 @@ research notes, Feynman repair, lit review, plan spec.
 5. **Next**: EXP12 claim — Rung 3 (larger register tiles / BM=M tiling),
    target 25 → 50+ TFLOPS.
 
+## Addendum 7 (2026-09-15, ~03:00): M2 Rung 3 measured — narrow win, falsifier 2 fired, mechanism re-diagnosed
+
+1. **EXP12 (8×8 register tiles, BM=256/BN=128/BK=16)** implemented. First
+   build **failed at launch** ("too many resources requested": 64
+   accumulators vs the 128-reg budget at 512 threads) → `__launch_bounds__`
+   added (config unchanged, recorded); res-usage now REG:128 STACK:48
+   **LOCAL:0 (no spills)**, 1 block/SM as the claim predicted. Gates:
+   ctest 61/61, memcheck 0, racecheck 0.
+2. **Measured (L2-flush protocol)**: **LM head M=256/512 1.27–1.28×** →
+   **30.68 TFLOPS = 27.5% of FFMA peak (new ladder best)**; but MLP gate+up
+   M=512 0.76× / 18.94 TFLOPS → **falsifier 2 fired** (< 30), and small-N
+   shapes 1.6–3× slower; small M 0.32–0.64×.
+3. **Mechanism found in the data: grid parallelism.** grid =
+   ceil(N/BN) × ceil(M/BM) — BN=128 gives QKV only **32 blocks of 512
+   threads against 170 SMs** at M ≤ 256 (138 idle). No byte-accounting term
+   modelled this; the pre-coding shared-BW hypothesis is not the dominant
+   limiter and the 3.2× unexplained overhead survives.
+4. **Dispatch policy is now three-way and measured**: rung3 (huge N,
+   M ≥ 256) / rung2 (mid) / rung1 (< ~64).
+5. **Next**: EXP13 claim — the mandated re-diagnosis (occupancy/parallelism
+   sweep BN × BM on the same math; barrier-frequency probe BK 16 vs 32)
+   before any further rung.
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:
