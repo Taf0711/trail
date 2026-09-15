@@ -102,16 +102,26 @@ count from SASS as the primary metric (that's the diagnosed limiter).
 **Done when**: one variant wins on the same-shape benchmark with all gates
 green; the other is recorded REJECTED with mechanism explained.
 
-## C3 — M2: GEMM/tensor-core ladder (IN PROGRESS — Rung 0 claim registered, EXP9)
+## C3 — M2: GEMM/tensor-core ladder (IN PROGRESS — Rung 0 DONE, EXP9)
 
-**Benchmark matrix now fixed from the REAL `Qwen/Qwen3-1.7B` config.json**
+**Benchmark matrix fixed from the REAL `Qwen/Qwen3-1.7B` config.json**
 (fetched 2026-09-14): QKV fused 4096×2048, O-proj 2048×2048, MLP gate+up
 12288×2048, MLP down 2048×6144, LM head 151936×2048; M sweep 1→512.
 **Pre-registered:** ideal-traffic crossover M\* ≈ 131–140 (f32, from measured
-111.4 TFLOPS / 1810 GB/s → AI 61.5 flops/byte); the naive Rung-0 kernel is
-predicted to stay BW-bound far beyond that (X/W re-reads), landing at
-M\* ≈ 400–1000. See experiments/LEDGER.md EXP9 for the full claim, band,
-and falsifiers.
+111.4 TFLOPS / 1810 GB/s → AI 61.5 flops/byte).
+
+**Rung 0 measured (2026-09-14):** naive Tier-0 KEEP — plateaus at
+0.70–0.93 TFLOPS (0.6–0.8% of FFMA peak), 1.75×–140× off the ideal
+roofline, never BW-bound in-sweep (latency/issue-bound: K-deep dependent
+FFMA chain + 32 scattered W sectors per warp-step), occupancy starvation
+at small M (16.7–57.2% spread; the 64-block shapes idle >60% of SMs),
+occupancy quantization visible at the 170-SM boundary. No falsifier
+fired. Full record: experiments/E0009_gemm_f32_naive.md.
+
+**Next: Rung 1 claim (EXP10)** — coalesced + shared-memory tiling (lanes
+cover k, independent accumulators, X staged in shared memory; bound gate
+per E0004 policy). Ladder: coalesced → shared tiling → register tiling →
+tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-

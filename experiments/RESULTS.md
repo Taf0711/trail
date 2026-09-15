@@ -133,6 +133,14 @@
 | 2026-09-14 | EXP8 v2 (2^26) | 2^26 w | 25.0 | 25.0 | 25.1 | µs | 1510 GB/s | 83.4% OC | (same binary) | v4 25.1 (83.2%) — tie |
 | 2026-09-14 | EXP8 v2 (2^24) | 2^24 w | 9.5 | 9.8 | 11.1 | µs | 966 GB/s | 53.4% OC | (same binary) | v4 9.5 (54.9%) — noise-level |
 | 2026-09-14 | **DECODE-GEMV FAMILY CLOSED** | — | — | — | — | — | — | — | — | ~83% accepted as the family ceiling (per EXP8 falsifier-1 branch): wall stable across v2/v3/v4/composed reshapes; E0005 v2 = production kernel; residual ~17% attributed to DRAM-protocol/L2 request mix (ncu-only); re-ranked to M2 |
+| 2026-09-14 | **EXP9 naive f32 GEMM — QKV fused 4096×2048, M=1** | M=1 | 55.6 | 55.6 | 55.7 | µs | 603 GB/s | 33.3% BW | 0 err + racecheck 0 | M2 Rung 0; in the predicted 30–40% band; ideal 18.6 µs → 3.0× off |
+| 2026-09-14 | EXP9 naive f32 GEMM — QKV fused, M=512 | M=512 | 9278 | 10684 | 10933 | µs | 4 GB/s | 0.2% BW | (same binary) | 0.80 TFLOPS = 0.7% of FFMA peak; 139× off ideal; adaptive repetition (10-warmup + 15×1, recorded) |
+| 2026-09-14 | EXP9 naive f32 GEMM — O-proj 2048×2048, M=1 | M=1 | 55.6 | 55.7 | 71.5 | µs | 302 GB/s | 16.7% BW | (same binary) | BELOW the 30–40% band: grid = 64 blocks < 170 SMs → occupancy starvation at small M |
+| 2026-09-14 | EXP9 naive f32 GEMM — MLP gate+up 12288×2048, M=1 | M=1 | 96.6 | 97.2 | 97.8 | µs | 1036 GB/s | 57.2% BW | (same binary) | ABOVE the band: 384 blocks → best-filled shape; occupancy is the missing M=1 variable |
+| 2026-09-14 | EXP9 naive f32 GEMM — MLP down 2048×6144, M=1 | M=1 | 160.3 | 160.5 | 179.5 | µs | 314 GB/s | 17.3% BW | (same binary) | same 64-block starvation as O-proj |
+| 2026-09-14 | EXP9 naive f32 GEMM — LM head 151936×2048, M=1 | M=1 | 1760 | 1777 | 1800 | µs | 701 GB/s | 38.7% BW | (same binary) | in the 30–40% band; 4750-block grid fills the machine |
+| 2026-09-14 | EXP9 naive f32 GEMM — TFLOPS plateau, all shapes, M≥16 | — | — | — | — | — | 0.70–0.93 TFLOPS | 0.6–0.8% FFMA | (same binary) | latency/issue-bound: sequential dependent-FFMA chain (K deep) + 32 scattered W sectors per warp-step; time linear in M — naive never BW-bound (prediction b held); occupancy quantization visible (O-proj M=8→16: same µs, 2× flops) |
+| 2026-09-14 | **EXP9 Tier-0 verdict** | — | — | — | — | — | — | — | — | KEEP as Tier-0; ladder envelope 1.75×–140× vs ideal roofline; ideal-traffic M\* ≈ 131–140 (pre-registered from measured 111.4 TFLOPS / 1810 GB/s) remains the reference line; full 50-cell table in experiments/E0009_gemm_f32_naive.md |
 
 **Key correction to all prior efficiency claims**: the honest denominator is
 **1519 GB/s (measured copy), not 1790 GB/s (spec)**. Vector-add float4's

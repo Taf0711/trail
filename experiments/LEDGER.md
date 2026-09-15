@@ -556,10 +556,45 @@ harness and the Tier-0 baseline row that every later rung must beat.
 - **Rows recorded**: per (shape, M): p5/median/p95 µs, achieved GB/s,
   achieved TFLOPS, % of BW ceiling, % of FFMA peak.
 
-**Ladder after Rung 0** (each with its own claim, one variable at a time):
-coalesced → shared-memory tiling → register tiling → tensor-core (mma/wmma)
-→ Tier-3 comparison vs cuBLAS/CUTLASS. Done when the roofline plot
-bandwidth-vs-TFLOPS matches or refutes the M\* ≈ 135 prediction.
+**Measured (2026-09-14, GPU idle 0%/31 °C, medians; adaptive repetition
+recorded per row):**
+
+| Shape | M=1 med µs (%BW) | M=512 med µs (TFLOPS, %FFMA) | meas/ideal range |
+|---|---|---|---|
+| QKV fused 4096×2048 | 55.6 (33.3%) | 10684.0 (0.80, 0.7%) | 3.0× → 139× |
+| O-proj 2048×2048 | 55.7 (16.7%) | 4738.3 (0.91, 0.8%) | 6.0× → 123× |
+| MLP gate+up 12288×2048 | 97.2 (57.2%) | 27734.9 (0.93, 0.8%) | 1.75× → 120× |
+| MLP down 2048×6144 | 160.5 (17.3%) | 14324.3 (0.90, 0.8%) | 5.8× → 124× |
+| LM head 151936×2048 | 1776.6 (38.7%) | 400265.6 (0.80, 0.7%) | 2.6× → 140× |
+
+Gates: ctest 52/52 (4 new: 64-shape bitwise grid × 4 seeds, zero-operand
+exact, large-magnitude bitwise, determinism), memcheck 0, racecheck 0,
+SASS committed. **KEEP as Tier-0.** No falsifier fired:
+- Prediction (a) held for the well-occupied shapes (QKV 33.3%, LM head
+  38.7% — inside 30–40%) but the M=1 spread is 16.7–57.2%: the missing
+  variable is occupancy — at M=1 the grid is N/32 blocks (O-proj: 64
+  blocks on 170 SMs → >60% of the GPU idle; gate+up: 384 blocks → best
+  filled). One-thread-per-output starves the GPU at small M — the exact
+  failure the GEMV block-per-row + reduction mapping exists to fix.
+- Prediction (b) held decisively: naive is NEVER BW-bound in-sweep —
+  achieved GB/s falls monotonically with M; time scales linearly in M at a
+  constant 0.7–0.9 TFLOPS plateau. The kernel is latency/issue-bound
+  (sequential dependent-FFMA chain, K deep; W loads touch 32 scattered
+  sectors per warp-step). Naive M\* is effectively unbounded — nothing
+  like the ideal ~135.
+- Prediction (c) held but was 30× too generous: 0.6–0.8% of FFMA peak
+  (predicted ≤ 25%).
+- Occupancy quantization visible: O-proj M=8→16 identical wall-clock
+  (192.9 µs) with doubled work as the grid crosses the 170-SM boundary.
+
+**Ladder envelope: 1.75×–140× between Tier-0 and the ideal roofline** (and
+the ideal assumes no tensor cores). Next: **Rung 1 claim — coalesced +
+shared-memory tiling** (lanes cover k, independent accumulators, X staged
+in shared memory; order changes → cancellation-aware bound gate per E0004
+policy); the M\* ≈ 135 line remains the reference the tiled rungs must
+approach and cross.
+
+Full record: `experiments/E0009_gemm_f32_naive.md`.
 
 ## Ledger discipline (the rules)
 

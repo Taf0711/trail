@@ -172,6 +172,26 @@ research notes, Feynman repair, lit review, plan spec.
    production decode kernel.** C2 closed; M2 (C3 GEMM/tensor-core ladder)
    is next — or M5 pulled forward by owner preference.
 
+## Addendum 4 (same day, ~22:00–23:00): M2 begun — EXP9 Rung 0 claimed, implemented, measured
+
+1. **Config verified from the source**: Qwen3-1.7B config.json fetched
+   from HF (hidden 2048, intermediate 6144, 16/8 heads, head_dim 128,
+   vocab 151936, tied embeddings, bf16) → the five-matrix benchmark set
+   (QKV fused 4096×2048 … LM head 151936×2048), M sweep 1..512.
+2. **Pre-registered crossover from measured rates** (not spec): ideal
+   M\* ≈ 131–140 for all five shapes (AI 61.5 flops/byte from
+   111.4 TFLOPS / 1810 GB/s).
+3. **Rung 0 (naive f32 GEMM)**: bitwise-gated vs a new sequential-k CPU
+   reference (52/52 ctest, memcheck 0, racecheck 0, SASS committed) and
+   measured: **plateau 0.70–0.93 TFLOPS = 0.6–0.8% of FFMA peak,
+   1.75×–140× off ideal, never BW-bound in-sweep** — latency/issue-bound
+   (dependent-FFMA chain + scattered W sectors). M=1 spread 16.7–57.2%
+  is occupancy (N/32-block grids vs 170 SMs) — the 30–40% prediction
+  held only for well-filled shapes. Occupancy quantization visible
+  (O-proj M=8→16: same µs, 2× flops).
+4. **Next**: EXP10 claim — coalesced + shared-memory tiling (bound gate,
+  E0004 policy).
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:
