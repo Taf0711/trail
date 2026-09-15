@@ -596,6 +596,58 @@ approach and cross.
 
 Full record: `experiments/E0009_gemm_f32_naive.md`.
 
+## EXP10 — M2 Rung 1: coalesced k-parallel GEMM (attack the Rung-0 diagnosis)
+
+**Pre-coding diagnosis (from EXP9 measurements + SASS):** Rung 0's plateau at
+0.70–0.93 TFLOPS (0.6–0.8% of FFMA peak) has three identified causes, all
+visible in the data:
+1. **Uncoalesced W**: lanes covered consecutive `n` while W is [N,K]
+   row-major, so each warp-load touched 32 sectors (stride 4K bytes) —
+   measured as GB/s-on-ideal-bytes falling monotonically with M
+   (1036 → 5 GB/s).
+2. **Dependent-FFMA chain**: one accumulator per thread, K deep, so the
+   K-loop is latency-serialized (time perfectly linear in M at fixed
+   TFLOPS).
+3. **Small-M occupancy starvation**: grid = N/32 blocks, so O-proj/down
+   (64 blocks) left >60% of the 170 SMs idle at M=1 (16.7–17.3% of BW),
+   while gate+up (384 blocks) reached 57.2%.
+
+**Accounting claim (candidate v2 — one variable changed from Rung 0: the
+k-parallel mapping):**
+- Same semantic op and same f32 format. **Warp-per-output mapping**: lanes
+  cover consecutive `k`, so both W[n,:] and X[m,:] are read as contiguous
+  128-B warp transactions (1 sector-class per load instead of 32) with a
+  warp-shuffle reduction at the end. Block = 128 threads (4 warps) owning
+  output row n and looping over ALL m — W[n,:] is then read ONCE from DRAM
+  and reused across the whole batch (weight-stationary reuse), which also
+  removes the M× W re-read that a naive (m,n)-per-warp mapping would pay.
+- **ILP**: each lane keeps 4 independent partial accumulators over strided
+  k (k, k+32, k+64, k+96), breaking the single dependent chain.
+- Bytes: W compulsory (read once); X re-read per block from L2 (X is
+tiny: M·K·4 B; L2-resident) — no shared-memory staging yet (deliberately
+  reserved for Rung 2, one variable at a time).
+- **Prediction**: (a) at M=1 this mapping degenerates to the E0004/E0005
+  f32 GEMV structure, which measured **97.4% of the BW ceiling** — so
+  predict **85–98% of ceiling at M=1** (from Rung 0's 16.7–57.2%);
+  (b) large-M TFLOPS jumps from ~0.8 to **6–20 TFLOPS (5–18% of FFMA
+  peak)** via coalescing + ILP + reuse; (c) the achieved-TFLOPS curve
+  should stop being flat in M — it must rise with M until the k-loop
+  ceases to dominate.
+- **Falsifiers**: (1) M=1 < 70% of ceiling → the coalescing/occupancy
+  diagnosis is wrong, re-diagnose before any further rung; (2) large-M
+  < 3 TFLOPS (< 3% FFMA) → the plateau is NOT latency/coalescing-bound
+  (look for LSU/shared/issue limits with SASS before coding more rungs);
+  (3) > 111.4 TFLOPS or > 1810 GB/s → measurement bug, audit; (4) any
+  bound-gate or exact-zero failure → stop.
+- **Correctness**: accumulation order changes (k-parallel + shuffle
+  reduction + 4 independent partials) → bitwise vs Rung 0 is impossible
+  by construction; gate = cancellation-aware bound vs the sequential
+  reference (E0004 policy, `docs/TESTING.md`) + exact-zero edges +
+  determinism + memcheck/racecheck + SASS artifact.
+- **Recorded per row**: same metric set as EXP9 (p5/median/p95, GB/s on
+  ideal bytes, TFLOPS, %-of-ceilings, meas/ideal) so the rungs are
+  directly comparable on the identical shape × M matrix.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

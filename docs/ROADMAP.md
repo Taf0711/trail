@@ -118,10 +118,14 @@ at small M (16.7–57.2% spread; the 64-block shapes idle >60% of SMs),
 occupancy quantization visible at the 170-SM boundary. No falsifier
 fired. Full record: experiments/E0009_gemm_f32_naive.md.
 
-**Next: Rung 1 claim (EXP10)** — coalesced + shared-memory tiling (lanes
-cover k, independent accumulators, X staged in shared memory; bound gate
-per E0004 policy). Ladder: coalesced → shared tiling → register tiling →
-tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
+**Next: Rung 1 claim (EXP10) — REGISTERED** — coalesced k-parallel mapping
+(warp-per-output, lanes over k, 4 independent accumulators, block owns
+output row and loops the batch for weight-stationary reuse; bound gate per
+E0004 policy). Predictions: M=1 recovers to 85–98% of the BW ceiling
+(E0004/E0005 precedent), large-M TFLOPS 6–20 (5–18% of FFMA peak), and the
+flat-in-M TFLOPS curve must start rising. Ladder: coalesced (EXP10) →
+shared-memory tiling → register tiling → tensor-core (488 TFLOPS ceiling)
+→ cuBLAS/CUTLASS Tier-3.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-
