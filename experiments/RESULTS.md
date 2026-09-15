@@ -181,6 +181,34 @@ the ladder moves to boundaries (EXP2 fusion) and new kernel families.
 
 ## Baselines to compare against (public, same GPU class)
 
+### Where Trail sits (as of EXP11, 2026-09-15)
+
+| Regime | Trail | Reference implementation | Gap |
+|---|---|---|---|
+| Decode Q4_K GEMV (M=1) | 1488–1512 GB/s = 83–84% of the 1790 GB/s spec, **≈98% of our measured copy ceiling (1810 GB/s OC)** | llama.cpp-class Q4_K GEMV: 88–94% of peak DRAM BW on large layers, ~50% on small (tail-limited); literature notes in-register DP4A dequant leaves "limited optimization headroom" | At the practical ceiling; family closed (E0007/E0008 REJECTs independently corroborated) |
+| f32 GEMM (compute-bound, no tensor cores) | best **25.09 TFLOPS = 22.5% of the measured 111.4 TFLOPS FFMA peak** (Rung 2, MLP gate+up M=512); ladder 0.93 → 8.34 → 25.09 (27×) | cuBLAS-class SGEMM commonly targets 80–90% of FMA peak; an sm_120 study found cuBLAS dispatching a suboptimal kernel at 1024–8192 (custom TMA SGEMM +50–60% over it) | **~4–5× behind the reference**; Rung 3 target ~45–65 TFLOPS (40–60% of peak) |
+| Tensor-core path | not started (measured mma ceiling **488.8 TFLOPS = 4.4× FFMA**) | cuBLAS 12.9 emulates FP32 on Blackwell BF16 tensor cores (3–4× native FP32); MARLIN W4A16 ≈ 3.9× vs FP16 at small batch on A10, holding ~4× to batch 16–32 and dropping to 1.5× at batch 128 | Untapped until Rung 4 — and the industry has partly replaced native FP32 |
+
+### Caveats on comparability (do not skip)
+
+1. **Denominators differ.** Trail's percentages use *measured* ceilings (L0:
+   1810 GB/s copy, 111.4 TFLOPS FFMA) rather than spec sheets — a stricter
+   standard than most published "% of peak" figures.
+2. **Protocol differs.** Trail rows are kernel-only, GPU-idle-checked,
+   paired same-run, and (from EXP10) **L2-flush-audited**. Repeated-launch
+   benchmarks whose weight set fits in ~96 MB L2 report L2 bandwidth, not
+   DRAM; published small-weight-shape figures may be inflated by the same
+   effect (this is the most transferable finding of the M2 cycle so far).
+3. **Hardware/format differ.** MARLIN/QServe/FLUTE numbers are
+   W4A16/W4A8 tensor-core results on A10-class or server Blackwell parts,
+   often end-to-end rather than kernel-level; not directly comparable to f32
+   CUDA-core kernels.
+4. **Model scale differs.** Qwen3-1.7B (hidden 2048, vocab 151936) is small
+   by serving standards, and M=512 prefill at these N,K is not
+   compute-saturated the way large-model prefill is.
+
+### Engines (end-to-end, later milestones)
+
 - Roofline: 1.79 TB/s (RTX 5090 GDDR7, 512-bit) → vector-add speed-of-light
   ≈ 450 µs/kernel at 2^26.
 - Engines live at 64–90% of theoretical bandwidth (runinfra sweep).
@@ -188,6 +216,21 @@ the ladder moves to boundaries (EXP2 fusion) and new kernel families.
   tg128 ≈ 290 tok/s (gh #15013) — end-to-end comparators for later milestones.
 - Qwen3.8-27B on 5090: 69–152 tok/s decode depending on stack/MTP acceptance
   (see docs/research-inference-landscape.md §4).
+
+### External sources for the rows above
+
+- cuBLAS / sm_120 SGEMM and TMA comparison —
+  https://kernelspace.substack.com/p/surfacing-a-60-performance-bug-in
+- Blackwell GEMM benchmark (Machete/CuTe vs cuBLAS) —
+  https://github.com/sushrutkr/blackwell_gemm_bench
+- cuBLAS 12.9 FP32 emulation on BF16 tensor cores —
+  https://developer.nvidia.com/blog/boosting-matrix-multiplication-speed-and-flexibility-with-nvidia-cublas-12-9/
+- llama.cpp quantized GEMV bandwidth study (88–94% large / ~50% small) —
+  https://github.com/Anbeeld/beellama.cpp (speed_experiments.md)
+- MARLIN — https://arxiv.org/html/2408.11743v1 · https://github.com/IST-DASLab/marlin
+
+> Cross-checked 2026-09-15. Blackwell kernel data is sparse and sometimes
+> contradictory; these rows are reference points, not a leaderboard.
 
 ## Publishing checklist (before any result leaves the repo)
 

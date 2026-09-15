@@ -137,10 +137,16 @@ above**. Measured crossover M ∈ [32, 256], centred ~64–128, bracketing the
 pre-registered ideal-traffic M\* ≈ 131–140. Full record:
 experiments/E0011_gemm_f32_tiled.md.
 
-**Next: Rung 3 claim (EXP12)** — larger register tiles and/or BM=M tiling so
-W is read once at M=512 (the 4× BM<M re-read is the recorded limit); target
-25 → 50+ TFLOPS. Then tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS
-Tier-3.
+**Next: Rung 3 claim (EXP12) — REGISTERED** — 8×8 register tiles (halve the
+shared-memory term: loads/FMA 0.5 → 0.25) plus a rebalanced BM=256/BN=128
+tile (W re-read 4× → 2×). Pre-coding accounting on the EXP11 LM head M=512
+cell puts shared traffic as the largest single predicted term (5.1 ms) while
+the measured 16.5 ms sits 3.2× above every individual term — so the claim
+registers that unexplained overhead as what the falsifiers test
+(gain < 1.15× ⇒ shared-BW hypothesis wrong; re-diagnose occupancy/spills/
+sync before another rung). Predicted band 30–55 TFLOPS. Register-pressure
+risk (64 accumulators, ~1 block/SM) registered explicitly. Then tensor-core
+(488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-

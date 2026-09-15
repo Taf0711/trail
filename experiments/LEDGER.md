@@ -812,6 +812,57 @@ zero-exact and determinism), memcheck 0, racecheck 0, SASS (928 inst,
 Full record: `experiments/E0011_gemm_f32_tiled.md`. Next: **EXP12 claim —
 Rung 3 register tiling / BM=M**, target 25 → 50+ TFLOPS.
 
+## EXP12 — M2 Rung 3: 8×8 register tiles + rebalanced block tile (attack the shared-BW term)
+
+**Pre-coding term accounting (from EXP11's measured LM head M=512 cell —
+16 530 µs / 19.28 TFLOPS; flops 318.6 GFLOP, FMAs 159.3 G):**
+
+| Term | Arithmetic | Predicted |
+|---|---|---|
+| DRAM (Rung-2 geometry BM=128, BN=64) | W re-read M/BM = 4× × 1.2447 GB (W > L2 ⇒ DRAM) + Y 0.31 GB | ≈ 5.3 GB → **2.9 ms** |
+| L2 (X re-reads) | X 4.19 MB × N/BN (=2374 passes) = 9.95 GB at ~10 TB/s | ≈ **1.0 ms** |
+| **Shared** | loads/FMA = (TM+TN)/(TM·TN) = 8/16 = 0.5 → 79.7 G loads × 4 B = 318.6 GB at 62 TB/s (170 SM × 128 B/clk × 2.85 GHz) | ≈ **5.1 ms** |
+| Measured | 16 530 µs | 3.2× above the largest single term |
+
+**Reading:** the largest single predicted term is **shared-memory traffic**
+(5.1 ms), but the measured time is 3.2× above *every* individual term —
+so byte accounting alone does not explain Rung 2. Both facts drive the
+rung: halve the shared term and cut the DRAM re-read, while explicitly
+registering the unexplained overhead as the thing the falsifiers test.
+
+**Accounting claim (candidate v4):**
+- **TM=TN=8** register tiles ⇒ shared loads/FMA 0.5 → **0.25** (shared
+  bytes 318.6 → 159.3 GB ⇒ 5.1 → 2.6 ms).
+- **Tile rebalance BM=256, BN=128** (32 768 outputs = 512 threads × 64) ⇒
+  W re-read M/BM 4× → **2×** (DRAM 5.3 → 2.8 GB) and X re-read N/BN
+  2374 → 1187 passes (L2 9.95 → 4.97 GB). BK=16 keeps shared at
+  (256+128)×16×4 = 24 KB/block.
+- Predictions: if the shared term is real, large-M gains **≥ 1.3×** over
+  Rung 2 → **30–55 TFLOPS** band at LM head / MLP gate+up M=512 (from
+  19.28 / 25.09). Small-M dispatch unchanged (Rung 1 ≤ ~64, Rung 2 above).
+- **Registered register-pressure risk**: 64 accumulators + A/B fragments +
+  addressing ≈ 100–120 regs/thread; 512 threads ⇒ ~55 k regs ⇒ **1 block/SM
+  (~25% occupancy)**. Acceptable only because 64 independent FMA chains
+  supply the ILP — the measurement tests exactly that. **SASS res-usage
+  (REG/STACK/LOCAL) is part of the evidence; any LOCAL spill is a red flag
+  to report, not to hide.**
+- **Falsifiers**: (1) large-M gain < 1.15× → the shared-BW hypothesis is
+  wrong and the 3.2× unexplained overhead dominates → **re-diagnose
+  (occupancy, spills, __syncthreads stalls, LDS issue rate) before any
+  further rung**; (2) < 30 TFLOPS at MLP gate+up M=512 → same branch;
+  (3) > 111.4 TFLOPS or flushed BW > 1810 GB/s → audit; (4) bound-gate /
+  exact-zero / determinism failure → stop.
+- **Correctness**: accumulation order changes again (8×8 register
+  accumulation, k-chunked, rebalanced tile) → cancellation-aware bound
+  gate vs the sequential reference, over edge shapes chosen to straddle the
+  NEW tile boundaries (BM=256/BN=128/BK=16 ±1) + exact zeros + determinism
+  + memcheck + racecheck + SASS + res-usage.
+- **Methodology**: L2-flush protocol continues; warm and flushed both
+  recorded; rung-to-rung comparison stays same-run paired.
+- Records also the **hybrid dispatch policy** for M5/M6: Rung 1 for
+  M ≤ ~64, Rung 2 (or Rung 3, if it wins) above — the runtime selects by M
+  at the layer call site.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
