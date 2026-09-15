@@ -699,6 +699,72 @@ Full record: `experiments/E0010_gemm_f32_coalesced.md`. Next: **EXP11 claim
 — Rung 2 shared-memory tiling** (plus the L2-flush protocol from the
 start).
 
+## EXP11 — M2 Rung 2: double-tiled GEMM (shared staging + register tiles)
+
+**Pre-claim term ablation (measurement instrument, run BEFORE this claim;
+`artifacts/E0011_term_ablation.txt`).** EXP10 proved X re-reads exist but not
+which term binds, so both re-read streams were collapsed independently in a
+purpose-built probe (semantically wrong on purpose — MODE 1: every m reads X
+row 0; MODE 2: every n reads W row 0; MODE 3: both):
+
+| Shape | M | baseline µs | X-collapsed | W-collapsed | both-off |
+|---|---|---|---|---|---|
+| QKV | 128 | 357.9 | 173.4 (0.48×) | 208.4 (0.58×) | 160.4 (0.45×) |
+| QKV | 512 | 2144.5 | 670.0 (0.31×) | 786.6 (0.37×) | 619.5 (0.29×) |
+| MLP down | 128 | 1360.1 | 382.4 (0.28×) | 418.1 (0.31×) | 236.1 (0.17×) |
+| MLP down | 512 | 6221.4 | 1499.2 (0.24×) | 1509.7 (0.24×) | 931.3 (0.15×) |
+| LM head | 128 | 28610 | 6147.6 (0.21×) | 6186.6 (0.22×) | 5641.1 (0.20×) |
+| LM head | 512 | 128710 | 24180 (0.19×) | 23815 (0.19×) | 23106 (0.18×) |
+
+**Findings (drive the design):**
+1. **The two re-read terms are symmetric and each is independently
+   binding** (collapsing either alone gives ~0.19–0.58×). They are the same
+   order of magnitude by construction (LM head M=512: X·N/BN ≈ 608 GB vs
+   W·M/BM ≈ 635 GB from L2).
+2. **Collapsing both still leaves the wall** (LM head M=512: 23.1 ms ≈
+   13.8 TFLOPS, 8× off the 2.86 ms FFMA ideal). So Rung 1's mapping has its
+   own compute/issue ceiling too — one rung cannot fix both terms; the
+   tiled design also needs register-level reuse/ILP.
+3. Caveat recorded: MODE 3 makes all blocks read the same 8 KB, so it is a
+   contention-heavy LOWER bound on the compute ceiling, not a clean one.
+
+**Accounting claim (candidate v3 — textbook double-tiled GEMM):**
+- Tile geometry: **BM=128, BN=64, BK=32; 512 threads; TM=TN=4** (16
+  independent accumulators per thread ⇒ 8192 outputs per tile),
+  shared = A-tile 128×32 + B-tile 64×32 floats = 24 KB/block.
+- One variable class changed: both operands are staged in shared memory
+  per k-chunk and consumed through per-thread register tiles, so within a
+  tile each A element is reused BN times and each B element BM times from
+  shared instead of L2. X traffic → (N/BN)·M·K·4; W traffic → (M/BM)·N·K·4.
+- Predictions (rell. 1810 GB/s / 111.4 TFLOPS, measured L0):
+  (a) **large M is the target**: LM head M=512 from Rung 1's 3.07 TFLOPS to
+  **10–30 TFLOPS** — the ablation's ~13.8 TFLOPS contention-bound floor sits
+  inside that band, so beating it is the real test of the register tiles;
+  (b) **M=1 must not regress** (>10% loss): X traffic falls
+  (N·8 KB → (N/64)·8 KB) but the kernel is W-DRAM-bound at M=1, so expect
+  parity to +5%; (c) the achieved-TFLOPS curve must stop declining with M.
+- **Known limit, predicted not fixed by this rung**: with BM=128 < M for
+  M=512, W is re-read M/BM = 4× (5 GB for LM head, and W > L2 so it is DRAM
+  traffic) — the claim predicts Rung 2 will be capped near
+  ~2.86 ms × (1+4×(1.24/1.24)) … i.e. W-re-read-dominated for the largest
+  shapes; the BM=M variant is explicitly deferred to Rung 3 unless
+  measurement says otherwise.
+- **Falsifiers**: (1) large-M < 6 TFLOPS → tiling did not fix the L2 term →
+  the term decomposition above is wrong; re-diagnose with ncu before any
+  further rung; (2) M=1 regression > 10% → keep Rung 1 as the small-M
+  kernel and scope Rung 2 to large M; (3) > 111.4 TFLOPS, or DRAM-honest
+  BW > 1810 GB/s → audit; (4) bound-gate / exact-zero / determinism
+  failure → stop.
+- **Correctness**: accumulation order changes (k-chunked, register-tile,
+  shared staging) → cancellation-aware bound gate vs the sequential
+  reference (E0004 policy) + edge shapes (M/N/K not multiples of BM/BN/BK:
+  1, 3, odd K, non-power-of-two) + exact zeros + determinism + memcheck +
+  racecheck + SASS.
+- **Methodology**: the **L2-flush protocol (docs/TESTING.md) is mandatory
+  for this rung** — warm repeated-launch rows are L2-inflated whenever W
+  fits in L2, so every row is reported flushed (DRAM-honest) with the warm
+  number alongside.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

@@ -1,0 +1,7 @@
+term ablation (medians, µs) — which collapse moves the wall
+QKV       M=128 | baseline      357.9 | X-collapsed      173.4 (0.48x) | W-collapsed      208.4 (0.58x) | both-off      160.4 (0.45x)
+QKV       M=512 | baseline     2144.5 | X-collapsed      670.0 (0.31x) | W-collapsed      786.6 (0.37x) | both-off      619.5 (0.29x)
+MLP down  M=128 | baseline     1360.1 | X-collapsed      382.4 (0.28x) | W-collapsed      418.1 (0.31x) | both-off      236.1 (0.17x)
+MLP down  M=512 | baseline     6221.4 | X-collapsed     1499.2 (0.24x) | W-collapsed     1509.7 (0.24x) | both-off      931.3 (0.15x)
+LM head   M=128 | baseline    28610.1 | X-collapsed     6147.6 (0.21x) | W-collapsed     6186.6 (0.22x) | both-off     5641.1 (0.20x)
+LM head   M=512 | baseline   128710.3 | X-collapsed    24180.4 (0.19x) | W-collapsed    23815.0 (0.19x) | both-off    23106.3 (0.18x)

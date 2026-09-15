@@ -127,10 +127,17 @@ TFLOPS). Falsifier 3 (apparent BW > ceiling) was resolved by audit as
 **L2 residency** and produced a new protocol rule (docs/TESTING.md) that all
 later rungs must follow. DRAM-honest M=1: 54–87% of ceiling.
 
-**Next: Rung 2 claim (EXP11)** — shared-memory tiling to stop re-reading X
-per output row; expect the large-M decline to flatten toward the
-M\* ≈ 135 line. Then register tiling → tensor-core (488 TFLOPS ceiling) →
-cuBLAS/CUTLASS Tier-3.
+**Next: Rung 2 claim (EXP11) — REGISTERED** — textbook double-tiled GEMM
+(BM=128, BN=64, BK=32, 512 threads, TM=TN=4; A and B staged in shared per
+k-chunk and consumed through register tiles). A pre-claim **term ablation**
+(`artifacts/E0011_term_ablation.txt`) showed both re-read terms (X·N/BN and
+W·M/BM) are symmetric and independently binding (either collapsed alone =
+0.19–0.58×), and that collapsing both still leaves a ~13.8 TFLOPS
+contention-bound floor — so the tiled rung must add register-level reuse,
+and beating ~14 TFLOPS at large M is its real test. Predicted 10–30 TFLOPS
+at LM head M=512 (from Rung 1's 3.07); M=1 must hold parity. The L2-flush
+protocol is mandatory for this rung. Then register tiling → tensor-core
+(488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-
