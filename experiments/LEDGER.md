@@ -908,6 +908,48 @@ re-diagnosis the falsifier mandates** (occupancy/parallelism sweep
 BN ∈ {32,64,128} × BM ∈ {64,128,256}; barrier-frequency probe BK=16 vs 32),
 claim first, before any further rung.
 
+## EXP13 — Rung 3 re-diagnosis: which term actually binds? (diagnostic; no candidate promoted)
+
+**Why**: EXP12 fired falsifier 2 (MLP gate+up M=512 = 18.94 TFLOPS < 30) and
+left a 3.2× gap between measured time and every byte-accounting term. The
+EXP12 verdict mandates re-diagnosis before any further rung. The mechanism
+visible in EXP12's data — grid parallelism — was never modelled, so this
+experiment prices the candidate terms against each other.
+
+**Instrument (measurement only, no promotion):** one templated kernel
+`gemm_tiled_tmpl<BM,BN,BK,TM,TN>` (identical math, only geometry varies),
+instantiated as a geometry sweep; per variant the probe reports **runtime
+occupancy** (`cudaOccupancyMaxActiveBlocksPerMultiprocessor` → blocks/SM,
+threads/SM), the **grid size** `ceil(N/BN)·ceil(M/BM)` blocks, and flushed
+(DRAM-honest) time/TFLOPS on three cells: QKV M=64 (small-N, grid-poor),
+QKV M=512, and LM head M=512 (grid-rich). Flushed-only keeps the
+comparison DRAM-honest and costs ~0.14 ms per sample.
+
+**Instantiations:**
+- Group A — TM=TN=8 (loads/FMA = 0.25), BK=16: (BM,BN) ∈ {(64,64), (128,64),
+  (128,128), (256,64), (256,128)} — block count varies 4× at constant
+  shared-reads-per-FMA.
+- Group B — TM=TN=4 (loads/FMA = 0.5), BK=32: (BM,BN) ∈ {(64,32), (128,32),
+  (128,64), (128,128)} — the same geometry ladder at twice the shared term.
+- Barrier probe — (BM,BN,TM,TN) = (256,128,8,8) with BK ∈ {16, 32, 64}:
+  barriers per K fall 4×.
+
+**Pre-registered discrimination table (fixed before measurement):**
+
+| If this binds | Then the data must show |
+|---|---|
+| **Grid parallelism** | at fixed TM/TN, TFLOPS scales with block count: BN 32 → 128 (4× fewer blocks) degrades small-N cells sharply, while LM head (grid-rich) is insensitive |
+| **Occupancy** | TFLOPS tracks reported blocks/SM × threads (occupancy %), not block count |
+| **Shared bandwidth** | TFLOPS tracks loads/FMA = (TM+TN)/(TM·TN): group A (0.25) should be ~2× group B (0.5) at matched geometry — EXP12 measured only 1.27×, so this hypothesis is already suspect |
+| **Barrier/sync cost** | BK 16 → 32 (halved barriers) moves time ≥ 10% |
+
+**Outcome handling (registered):** whichever row the data supports becomes
+the Rung-4 design input and is recorded — including the case where none
+dominates (that would point at the SM issue side, i.e. LDS issue rate or
+FMA-pipe utilisation, and would be recorded as such). No candidate is
+promoted by this experiment; its only falsifiable requirement is
+reproducibility of each cell within ~5% on a repeat run.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.
