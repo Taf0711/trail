@@ -42,34 +42,32 @@ M0 complete on native Windows (all `Trail_AGENTS.md` §26 outcomes reproduced: e
 
 ## Current Question
 
-- **M2 Rung 3 (EXP12) measured — falsifier 2 FIRED → RE-DIAGNOSE before
-  another rung.** 8×8 register tiles (BM=256/BN=128/BK=16, REG:128, LOCAL:0)
-  gave a genuine but narrow win: **LM head M=256/512 1.27–1.28×**, reaching
-  **30.68 TFLOPS = 27.5% of FFMA peak (new ladder best)**; but MLP gate+up
-  M=512 dropped to 0.76× / 18.94 TFLOPS (< the 30 TFLOPS falsifier line) and
-  the small-N shapes lost 1.6–3×. **Mechanism identified from the data —
-  grid parallelism**, a term no byte-accounting captures: with BN=128, QKV
-  launches only 32 blocks of 512 threads against 170 SMs at M ≤ 256 (138
-  SMs idle). The pre-coding shared-BW hypothesis is therefore *not* the
-  dominant limiter, and the 3.2× unexplained overhead survives (candidates:
-  LDS issue rate, `__syncthreads` stalls, 25% occupancy). Dispatch is now a
-  measured three-way policy: Rung 3 (huge N, M ≥ 256) / Rung 2 (mid) /
-  Rung 1 (< ~64).
+- **EXP13 re-diagnosis complete — all four hypotheses resolved.** The
+  pre-coding shared-bandwidth hypothesis is **REJECTED** (halving loads/FMA
+  gives no consistent gain; matched pairs sometimes favour the 0.50 tile).
+  Two real findings replace it: (1) **barrier/sync cost is large and was
+  self-inflicted** — at fixed 256×64 geometry, BK 16 → 32 = 1.38–1.56×, and
+  **Rung 3 chose BK=16 where Rung 2 had BK=32**; (2) **grid parallelism
+  binds when blocks are scarce** (QKV M=64: 32–128 blocks vs 170 SMs →
+  TFLOPS tracks block count monotonically; grid-rich LM head insensitive).
+  New constraint: static `__shared__` caps at 48 KB, so BK ≥ 32 with a wide
+  tile requires dynamic shared memory. Best observed: **31.0 TFLOPS** at
+  LM head M=512 (reproduces EXP12's 30.68 within 1%), and **24.6 TFLOPS** at
+  QKV M=512 from a *small* 64×32 tile with 1024 blocks — grid density beats
+  tile size.
 
 ## Next Smallest Step
 
-- **EXP13 claim — the re-diagnosis the falsifier mandates** (no new rung
-  until it is in): (a) **occupancy/parallelism sweep** on the *same* 8×8
-  math — BN ∈ {32,64,128} × BM ∈ {64,128,256} at fixed M,N,K, on a small-N
-  shape (QKV) and on LM head — separating grid parallelism from shared-BW
-  from occupancy; (b) **barrier-frequency probe**: BK=16 vs BK=32 (halves
-  `__syncthreads` per K) to price the sync term. Claim first, then run.
-- Design direction if the answer is occupancy: smaller tiles with more
-  blocks + `cp.async` pipelining (not bigger tiles).
-- Then tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3
-  (todos T-005…T-007; reference comparison recorded in RESULTS baselines).
-- Standing owner action: enable GPU performance counters (ncu) — the
-  re-diagnosis above is exactly what counters would settle in one shot.
+- **EXP14 claim — Rung 4 as a combination claim over the measured axes**:
+  (a) BK ≥ 32 always (1.4–1.6× measured), implemented with **dynamic shared
+  memory + `cudaFuncSetAttribute`** since static is capped at 48 KB;
+  (b) **grid density first** — target ≥ ~1000 blocks (shrink BN when N is
+  small, or split M further); (c) TM=TN=4 + BK=32 (competitive with 8×8, no
+  shared-BW penalty, lower registers). Prediction basis = E0013's table.
+  Claim before coding; L2-flush protocol continues.
+- Then tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
+- Standing owner action: enable GPU performance counters (ncu) — would settle
+  the remaining "3.2× unexplained" question directly.
 - Roadmap with all checkpoints: docs/ROADMAP.md.
 
 ## Owner actions outstanding

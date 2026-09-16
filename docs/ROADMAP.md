@@ -146,11 +146,21 @@ QKV with 32 blocks vs 170 SMs at M ≤ 256; no byte-accounting term captures it.
 Dispatch is now a measured three-way policy (rung3 huge-N M≥256 / rung2 mid /
 rung1 <64). Full record: experiments/E0012_gemm_f32_reg8.md.
 
-**Next: EXP13 claim (re-diagnosis, no new rung first)** — occupancy/parallelism
-sweep (same 8×8 math, BN ∈ {32,64,128} × BM ∈ {64,128,256}) + barrier-frequency
-probe (BK=16 vs 32) to separate grid parallelism / shared-BW / occupancy / sync
-stalls. If occupancy is the answer: smaller tiles + `cp.async` pipelining, not
-bigger tiles. Then tensor-core (488 TFLOPS ceiling) → cuBLAS/CUTLASS Tier-3.
+**Rung 3 re-diagnosis done (EXP13)** — all four pre-registered hypotheses
+resolved: shared-bandwidth **REJECTED**; **barrier/sync cost SUPPORTED**
+(BK 16→32 at fixed geometry = 1.38–1.56× — Rung 3's BK=16 vs Rung 2's BK=32
+was self-inflicted); **grid parallelism CONFIRMED** in grid-poor cells
+(QKV M=64: TFLOPS tracks block count 128→32 blk as 5.9→1.7); occupancy
+PARTIAL. Best: 31.0 TFLOPS (LM head M=512, reproduces EXP12 within 1%) and
+24.6 TFLOPS at QKV M=512 from a 64×32 tile with 1024 blocks — grid density
+beats tile size. New constraint: static shared caps at 48 KB → BK ≥ 32 with a
+wide tile needs dynamic shared. Full record:
+experiments/E0013_gemm_geometry_diagnosis.md.
+
+**Next: EXP14 claim — Rung 4 as a combination claim** over (BK ≥ 32 via
+dynamic shared memory, grid density ≥ ~1000 blocks, TM=TN=4+BK=32), with
+E0013's table as the prediction basis. Then tensor-core (488 TFLOPS ceiling)
+→ cuBLAS/CUTLASS Tier-3.
 
 **Goal**: the prefill-side kernel family. Design benchmark matrix from
 MARLIN (arXiv 2408.11743): batch sizes 1/2/4/8/16/32/64/128+ at model-

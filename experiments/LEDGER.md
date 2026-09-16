@@ -950,6 +950,59 @@ FMA-pipe utilisation, and would be recorded as such). No candidate is
 promoted by this experiment; its only falsifiable requirement is
 reproducibility of each cell within ~5% on a repeat run.
 
+**Measured (2026-09-15; full table = `artifacts/E0013_geometry_probe.txt`,
+replicate = `_run2`, SASS/res = `E0013_resusage.txt`):**
+
+| BM,BN,BK | TM×TN | thr | blk/SM | occ% | lds/FMA | QKV-M64 | QKV-M512 | LMhead-M512 |
+|---|---|---|---|---|---|---|---|---|
+| 64,64,16 | 8×8 | 64 | 6 | 18% | 0.25 | 2.2 | 16.5 | 27.9 |
+| 128,64,16 | 8×8 | 128 | 2 | 12% | 0.25 | 3.4 | 20.2 | 23.0 |
+| 128,128,16 | 8×8 | 256 | 1 | 12% | 0.25 | 3.1 | 21.6 | 27.7 |
+| 256,64,16 | 8×8 | 256 | 1 | 12% | 0.25 | 2.5 | 14.9 | 19.8 |
+| **256,128,16** | 8×8 | 512 | 1 | 25% | 0.25 | 1.7 | 12.4 | **31.0** |
+| **64,32,32** | 4×4 | 128 | 4 | 25% | 0.50 | **5.9** | **24.6** | 27.8 |
+| 128,32,32 | 4×4 | 256 | 2 | 25% | 0.50 | 5.4 | 19.5 | 25.0 |
+| 128,64,32 | 4×4 | 512 | 1 | 25% | 0.50 | 4.7 | 19.8 | 24.2 |
+| 128,128,32 | 4×4 | 1024 | 1 | 50% | 0.50 | 3.3 | 23.4 | 29.7 |
+| 256,64,32 | 8×8 | 256 | 1 | 12% | 0.25 | 3.9 | 20.6 | 28.0 |
+| 64,64,32 | 8×8 | 64 | 5 | 15% | 0.25 | 2.3 | 17.4 | 29.0 |
+| 64,64,64 | 8×8 | 64 | 2 | 6% | 0.25 | 2.3 | 10.4 | 12.3 |
+
+(TFLOPS, flushed/DRAM-honest; reproduce run 2 matched run 1 to <0.1% on
+the headline cells.)
+
+**All four pre-registered hypotheses resolved:**
+1. **Shared bandwidth — REJECTED.** Halving loads/FMA (0.25 vs 0.50) gives no
+   consistent gain; in matched pairs the 0.50 variant sometimes WINS
+   (LM head 128,128,16 = 27.7 vs 128,128,32 = 29.7). Explains EXP12's
+   marginal 1.27×: the 8×8 tile never attacked a binding term.
+2. **Barrier/sync cost — SUPPORTED (a self-inflicted regression).** At fixed
+   (256,64) geometry, BK 16 → 32 gives 1.56× (QKV-M64), 1.38× (QKV-M512),
+   1.41× (LM head). **Rung 3 chose BK=16 where Rung 2 had BK=32**, so part of
+   its losses were doubled barrier frequency, not tile shape. BK 64 then
+   degrades again (12.3 at 6% occupancy).
+3. **Grid parallelism — CONFIRMED where blocks are scarce.** Grid-poor cell
+   (QKV M=64: 32–128 blocks vs 170 SMs) tracks block count monotonically
+   (128 blk → 5.9; 64 → 3.9/4.7/3.4; 32 → 1.7); grid-rich LM head is
+   insensitive and its FEWEST-block variant wins (2374 → 31.0).
+4. **Occupancy — PARTIAL.** The 50%/1024-thread variant is 2nd on both large
+   cells (23.4 / 29.7) but does not order the table.
+
+**New design constraint recorded:** static `__shared__` is capped at 48 KB,
+so BK ≥ 32 with a 256×128 tile requires dynamic shared memory +
+`cudaFuncSetAttribute`. Since finding 2 makes BK ≥ 32 mandatory, **Rung 4 must
+adopt dynamic shared memory**.
+
+**Rung-4 design inputs (data, not assumption):** BK ≥ 32 always; grid density
+first (≥ ~1000 blocks — the 24.6 TFLOPS QKV result came from a 64×32 tile with
+1024 blocks, not a big tile); TM=TN=4+BK=32 is competitive with 8×8 and keeps
+registers low; don't chase occupancy alone.
+
+Full record: `experiments/E0013_gemm_geometry_diagnosis.md`. Next: **EXP14
+claim — Rung 4 as a combination claim over (BK ≥ 32 via dynamic shared,
+grid density, TM=TN=4)**, with this experiment's table as its prediction
+basis.
+
 ## Ledger discipline (the rules)
 
 1. No candidate is timed before its accounting claim is written down.

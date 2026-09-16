@@ -257,6 +257,28 @@ research notes, Feynman repair, lit review, plan spec.
    sweep BN × BM on the same math; barrier-frequency probe BK 16 vs 32)
    before any further rung.
 
+## Addendum 8 (2026-09-15, ~04:00): EXP13 re-diagnosis — shared-BW hypothesis killed, barrier term found
+
+1. **Instrument**: geometry-templated kernel (`src/gemm_f32_tmpl.cuh`) +
+   `bench/gemm_geometry_probe.cu` (committed, so the diagnostic is
+   reproducible from the repo): 12 variants × 3 cells, per-variant runtime
+   occupancy query, flushed (DRAM-honest) timing. One build failure fixed
+   en route: static `__shared__` caps at 48 KB, so BK ≥ 32 on a 256×128 tile
+   is impossible without dynamic shared memory (recorded as a constraint).
+2. **All four pre-registered hypotheses resolved**: shared-bandwidth
+   **REJECTED** (halving loads/FMA gives no consistent gain; some matched
+   pairs favour the 0.50 tile); **barrier/sync SUPPORTED** (BK 16→32 at fixed
+   geometry = 1.38–1.56×, i.e. Rung 3's BK=16 was a self-inflicted
+   regression vs Rung 2's BK=32); **grid parallelism CONFIRMED** where blocks
+   are scarce (QKV M=64: 128 blk 5.9 → 64 blk 3.9/4.7/3.4 → 32 blk 1.7
+   TFLOPS; grid-rich LM head insensitive); occupancy PARTIAL.
+3. **Best observed**: 31.0 TFLOPS at LM head M=512 (256,128,BK16 —
+   reproduces EXP12's 30.68 within 1%) and **24.6 TFLOPS at QKV M=512 from a
+   64×32 tile with 1024 blocks** — grid density beats tile size.
+   Reproducibility verified (<0.1% across two runs).
+4. **Next**: EXP14 claim — Rung 4 as a combination claim over BK ≥ 32
+   (dynamic shared), grid density ≥ ~1000 blocks, TM=TN=4+BK=32.
+
 ## Key sources
 
 - MARLIN: https://arxiv.org/abs/2408.11743 · QServe:
